@@ -1,0 +1,16 @@
+{
+  "name": "hxnmancave",
+  "private": true,
+  "version": "0.1.0",
+  "description": "ManCave — personal inventory of everything you own. Lives at vault.hxndev.com",
+  "scripts": {
+    "dev": "pnpm --filter @mancave/web dev",
+    "build": "pnpm --filter @mancave/web build",
+    "lint": "pnpm --filter @mancave/web lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=20"
+  }
+}
