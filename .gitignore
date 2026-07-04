@@ -1,5 +1,6 @@
 # dependencies
 node_modules/
+.pnpm-store/
 
 # build output
 dist/
@@ -9,6 +10,12 @@ build/
 .env
 .env.*
 !.env.example
+
+# expo / react native
+.expo/
+expo-env.d.ts
+apps/mobile/android/
+apps/mobile/ios/
 
 # supabase local dev
 supabase/.branches

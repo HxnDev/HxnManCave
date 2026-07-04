@@ -5,6 +5,7 @@
   "description": "ManCave — personal inventory of everything you own. Lives at vault.hxndev.com",
   "scripts": {
     "dev": "pnpm --filter @mancave/web dev",
+    "mobile": "pnpm --filter @mancave/mobile start",
     "build": "pnpm --filter @mancave/web build",
     "lint": "pnpm --filter @mancave/web lint",
     "typecheck": "pnpm -r typecheck"

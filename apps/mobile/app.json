@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "ManCave",
+    "slug": "mancave",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "mancave",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0F1714",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.hxndev.mancave"
+    },
+    "android": {
+      "package": "com.hxndev.mancave",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F1714",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0F1714",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 220
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "ManCave uses your photos to attach pictures to collection items.",
+          "cameraPermission": "ManCave uses the camera to photograph your collection items."
+        }
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "60a65b0a-3f70-4fa3-8b15-b31bc385448b"
+      }
+    }
+  }
+}
