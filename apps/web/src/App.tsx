@@ -1,26 +1,49 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { Preloader } from "@/components/motion/preloader";
 import { AppLayout } from "@/layouts/app-layout";
 import { AuthPage } from "@/pages/auth";
-import { CategoriesPage } from "@/pages/categories";
-import { CollectionsPage } from "@/pages/collections";
-import { DashboardPage } from "@/pages/dashboard";
 import { LandingPage } from "@/pages/landing";
-import { SettingsPage } from "@/pages/settings";
+
+const DashboardPage = lazy(() =>
+  import("@/pages/dashboard").then((m) => ({ default: m.DashboardPage })),
+);
+const CollectionsPage = lazy(() =>
+  import("@/pages/collections").then((m) => ({ default: m.CollectionsPage })),
+);
+const CategoriesPage = lazy(() =>
+  import("@/pages/categories").then((m) => ({ default: m.CategoriesPage })),
+);
+const ItemFormPage = lazy(() =>
+  import("@/pages/item-form").then((m) => ({ default: m.ItemFormPage })),
+);
+const ItemDetailPage = lazy(() =>
+  import("@/pages/item-detail").then((m) => ({ default: m.ItemDetailPage })),
+);
+const SettingsPage = lazy(() =>
+  import("@/pages/settings").then((m) => ({ default: m.SettingsPage })),
+);
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<AuthPage />} />
-        <Route path="/app" element={<AppLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="collections" element={<CollectionsPage />} />
-          <Route path="categories" element={<CategoriesPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Preloader />
+      <Suspense fallback={null}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/app" element={<AppLayout />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="collections" element={<CollectionsPage />} />
+            <Route path="categories" element={<CategoriesPage />} />
+            <Route path="items/new" element={<ItemFormPage />} />
+            <Route path="items/:id" element={<ItemDetailPage />} />
+            <Route path="items/:id/edit" element={<ItemFormPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

@@ -4,54 +4,55 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * ManCave — "the vault" design tokens.
- * Dark-first by design: warm charcoal base, brass/amber signature accent.
+ * ManCave — "the lounge" design tokens (v3).
+ * A collector's den after dark: deep green-tinted charcoal,
+ * emerald signature accent, walnut shelf planks, brass warmth.
  */
 :root {
   --radius: 0.75rem;
 
-  --background: oklch(0.15 0.01 75);
-  --foreground: oklch(0.93 0.01 85);
+  --background: oklch(0.145 0.012 175);
+  --foreground: oklch(0.94 0.008 160);
 
-  --card: oklch(0.19 0.012 75);
-  --card-foreground: oklch(0.93 0.01 85);
+  --card: oklch(0.18 0.015 175);
+  --card-foreground: oklch(0.94 0.008 160);
 
-  --popover: oklch(0.21 0.012 75);
-  --popover-foreground: oklch(0.93 0.01 85);
+  --popover: oklch(0.2 0.016 175);
+  --popover-foreground: oklch(0.94 0.008 160);
 
-  --primary: oklch(0.78 0.14 75);
-  --primary-foreground: oklch(0.17 0.02 75);
+  --primary: oklch(0.72 0.15 162);
+  --primary-foreground: oklch(0.16 0.03 165);
 
-  --secondary: oklch(0.25 0.012 75);
-  --secondary-foreground: oklch(0.93 0.01 85);
+  --secondary: oklch(0.24 0.018 175);
+  --secondary-foreground: oklch(0.94 0.008 160);
 
-  --muted: oklch(0.23 0.01 75);
-  --muted-foreground: oklch(0.64 0.015 80);
+  --muted: oklch(0.22 0.016 175);
+  --muted-foreground: oklch(0.67 0.015 165);
 
-  --accent: oklch(0.26 0.02 75);
-  --accent-foreground: oklch(0.95 0.015 85);
+  --accent: oklch(0.26 0.025 170);
+  --accent-foreground: oklch(0.96 0.01 160);
 
-  --destructive: oklch(0.6 0.21 25);
-  --destructive-foreground: oklch(0.97 0.01 25);
+  --destructive: oklch(0.62 0.22 20);
+  --destructive-foreground: oklch(0.97 0.01 20);
 
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.78 0.14 75 / 55%);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.72 0.15 162 / 55%);
 
-  --chart-1: oklch(0.78 0.14 75);
+  --chart-1: oklch(0.72 0.15 162);
   --chart-2: oklch(0.68 0.15 45);
   --chart-3: oklch(0.7 0.12 195);
   --chart-4: oklch(0.65 0.17 300);
   --chart-5: oklch(0.63 0.2 15);
 
-  --sidebar: oklch(0.13 0.009 75);
-  --sidebar-foreground: oklch(0.93 0.01 85);
-  --sidebar-primary: oklch(0.78 0.14 75);
-  --sidebar-primary-foreground: oklch(0.17 0.02 75);
-  --sidebar-accent: oklch(0.2 0.012 75);
-  --sidebar-accent-foreground: oklch(0.95 0.015 85);
+  --sidebar: oklch(0.125 0.011 175);
+  --sidebar-foreground: oklch(0.94 0.008 160);
+  --sidebar-primary: oklch(0.72 0.15 162);
+  --sidebar-primary-foreground: oklch(0.16 0.03 165);
+  --sidebar-accent: oklch(0.19 0.016 175);
+  --sidebar-accent-foreground: oklch(0.96 0.01 160);
   --sidebar-border: oklch(1 0 0 / 7%);
-  --sidebar-ring: oklch(0.78 0.14 75 / 55%);
+  --sidebar-ring: oklch(0.72 0.15 162 / 55%);
 }
 
 @theme inline {
@@ -113,7 +114,26 @@
   }
 
   ::selection {
-    @apply bg-primary/30 text-foreground;
+    @apply bg-primary/35 text-foreground;
+  }
+
+  /* Slim, themed scrollbars */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(1 0 0 / 12%);
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(1 0 0 / 20%);
+    background-clip: padding-box;
   }
 }
 
@@ -125,21 +145,112 @@
     inset: 0;
     z-index: 50;
     pointer-events: none;
-    opacity: 0.035;
+    opacity: 0.03;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
   .text-glow {
-    text-shadow: 0 0 32px oklch(0.78 0.14 75 / 35%);
+    text-shadow: 0 0 36px oklch(0.72 0.15 162 / 45%);
   }
 
+  /* Hero / landing backdrop: emerald spotlight + warm lamp glow */
   .vault-gradient {
     background:
       radial-gradient(
         ellipse 80% 50% at 50% -20%,
-        oklch(0.78 0.14 75 / 10%),
+        oklch(0.72 0.15 162 / 12%),
+        transparent
+      ),
+      radial-gradient(
+        ellipse 60% 40% at 85% 110%,
+        oklch(0.68 0.15 45 / 6%),
         transparent
       ),
       var(--background);
+  }
+
+  /* App content backdrop: faint overhead lamp */
+  .showcase-bg {
+    background:
+      radial-gradient(
+        ellipse 70% 30% at 50% 0%,
+        oklch(0.72 0.15 162 / 5%),
+        transparent
+      ),
+      var(--background);
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 40px -8px oklch(0.72 0.15 162 / 35%);
+  }
+
+  /* Oak shelf plank: wood gradient, grain streaks, lit top edge */
+  .shelf-plank {
+    background:
+      repeating-linear-gradient(
+        90deg,
+        oklch(1 0 0 / 0%) 0px,
+        oklch(1 0 0 / 4%) 2px,
+        oklch(0 0 0 / 5%) 5px,
+        oklch(1 0 0 / 0%) 11px
+      ),
+      linear-gradient(
+        180deg,
+        oklch(0.58 0.075 70),
+        oklch(0.47 0.07 62) 50%,
+        oklch(0.32 0.055 55)
+      );
+    box-shadow:
+      0 1px 0 oklch(1 0 0 / 18%) inset,
+      0 -1px 0 oklch(0 0 0 / 30%) inset;
+  }
+
+  /* Outer bookcase frame: the padding of this element forms the wood walls */
+  .wood-frame {
+    background:
+      repeating-linear-gradient(
+        0deg,
+        oklch(1 0 0 / 0%) 0px,
+        oklch(1 0 0 / 3%) 3px,
+        oklch(0 0 0 / 5%) 7px,
+        oklch(1 0 0 / 0%) 14px
+      ),
+      linear-gradient(
+        160deg,
+        oklch(0.56 0.075 70),
+        oklch(0.44 0.068 60) 55%,
+        oklch(0.34 0.055 55)
+      );
+    box-shadow:
+      0 2px 0 oklch(1 0 0 / 14%) inset,
+      0 24px 48px -16px oklch(0 0 0 / 65%);
+  }
+
+  /* Inside of the case: dark warm back panel */
+  .bookcase-back {
+    background: linear-gradient(
+      180deg,
+      oklch(0.185 0.015 85),
+      oklch(0.145 0.013 80)
+    );
+  }
+
+  /* One compartment: shelf above casts a shadow into it */
+  .compartment {
+    box-shadow: 0 18px 22px -16px oklch(0 0 0 / 70%) inset;
+  }
+
+  /* Brass name plaque screwed onto the plank */
+  .brass-plaque {
+    background: linear-gradient(
+      180deg,
+      oklch(0.72 0.09 85),
+      oklch(0.55 0.09 80) 55%,
+      oklch(0.45 0.08 75)
+    );
+    color: oklch(0.22 0.04 70);
+    box-shadow:
+      0 1px 0 oklch(1 0 0 / 35%) inset,
+      0 2px 4px oklch(0 0 0 / 45%);
   }
 }

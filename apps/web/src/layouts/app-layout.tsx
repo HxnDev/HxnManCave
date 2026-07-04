@@ -151,7 +151,7 @@ export function AppLayout() {
       </header>
 
       {/* Main content */}
-      <main className="min-w-0 flex-1 px-4 pt-20 pb-10 md:ml-60 md:px-8 md:pt-8">
+      <main className="showcase-bg min-w-0 flex-1 px-4 pt-20 pb-10 md:ml-60 md:px-8 md:pt-8">
         <Outlet />
       </main>
     </div>
