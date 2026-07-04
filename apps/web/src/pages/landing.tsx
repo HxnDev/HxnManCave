@@ -19,6 +19,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -149,26 +150,28 @@ const categoryChips = [
 ];
 
 export function LandingPage() {
+  const { session } = useAuth();
+  const ctaTarget = session ? "/app" : "/login";
+
   return (
     <div className="grain vault-gradient min-h-svh">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
         <Logo />
-        <Button asChild variant="outline">
-          <Link to="/login">Sign in</Link>
-        </Button>
+        {session ? (
+          <Button asChild>
+            <Link to="/app">
+              Open my vault <ArrowRight />
+            </Link>
+          </Button>
+        ) : (
+          <Button asChild variant="outline">
+            <Link to="/login">Sign in</Link>
+          </Button>
+        )}
       </header>
 
       {/* Hero */}
-      <section className="mx-auto flex w-full max-w-6xl flex-col items-center px-6 pt-14 pb-24 text-center sm:pt-20">
-        <motion.p
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-6 font-mono text-xs tracking-[0.35em] text-primary uppercase"
-        >
-          vault.hxndev.com
-        </motion.p>
-
+      <section className="mx-auto flex w-full max-w-6xl flex-col items-center px-6 pt-16 pb-24 text-center sm:pt-24">
         <motion.h1
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -198,7 +201,7 @@ export function LandingPage() {
           className="mt-10 mb-16"
         >
           <Button asChild size="lg" className="group h-12 px-7 text-base">
-            <Link to="/login">
+            <Link to={ctaTarget}>
               Enter the vault
               <ArrowRight className="transition-transform group-hover:translate-x-1" />
             </Link>
@@ -298,8 +301,8 @@ export function LandingPage() {
 
         <motion.div {...fadeUp} transition={{ duration: 0.5, delay: 0.2 }} className="mt-12">
           <Button asChild size="lg" className="group h-12 px-7 text-base">
-            <Link to="/login">
-              Start your vault — it's free
+            <Link to={ctaTarget}>
+              {session ? "Back to your vault" : "Start your vault — it's free"}
               <ArrowRight className="transition-transform group-hover:translate-x-1" />
             </Link>
           </Button>
