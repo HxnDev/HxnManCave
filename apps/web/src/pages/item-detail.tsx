@@ -27,7 +27,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDeleteItem, useItem } from "@/hooks/use-items";
 import { cn } from "@/lib/utils";
@@ -262,12 +261,6 @@ export function ItemDetailPage() {
               </Card>
             )}
 
-            {item.notes && (
-              <>
-                <Separator className="my-6" />
-                <p className="text-sm text-muted-foreground italic">{item.notes}</p>
-              </>
-            )}
           </div>
         </div>
       </div>

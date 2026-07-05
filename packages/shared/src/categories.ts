@@ -24,8 +24,6 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
       { key: "set_number", label: "Set Number", type: "text" },
       { key: "pieces", label: "Pieces", type: "number" },
       { key: "year", label: "Year", type: "number" },
-      { key: "theme", label: "Theme", type: "text" },
-      { key: "minifigures", label: "Minifigures", type: "number" },
       { key: "built", label: "Built", type: "boolean" },
     ],
   },
@@ -37,8 +35,6 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     field_template: [
       { key: "pop_number", label: "Pop Number", type: "text" },
       { key: "franchise", label: "Franchise", type: "text" },
-      { key: "exclusive", label: "Exclusive", type: "text" },
-      { key: "boxed", label: "In Box", type: "boolean" },
     ],
   },
   {
@@ -51,18 +47,6 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
       { key: "publisher", label: "Publisher", type: "text" },
       { key: "isbn", label: "ISBN", type: "text" },
       { key: "pages", label: "Pages", type: "number" },
-      { key: "language", label: "Language", type: "text" },
-      { key: "read", label: "Read", type: "boolean" },
-    ],
-  },
-  {
-    name: "Table Decor",
-    slug: "table-decor",
-    icon: "lamp-desk",
-    color: "oklch(0.72 0.13 140)",
-    field_template: [
-      { key: "material", label: "Material", type: "text" },
-      { key: "origin", label: "Origin", type: "text" },
     ],
   },
   {
@@ -139,13 +123,6 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
       { key: "warranty_until", label: "Warranty Until", type: "date" },
     ],
   },
-  {
-    name: "Other",
-    slug: "other",
-    icon: "package",
-    color: "oklch(0.64 0.015 80)",
-    field_template: [],
-  },
 ];
 
 /**
@@ -166,4 +143,21 @@ export const MONEY_HIDDEN_CATEGORY_SLUGS: string[] = [
 /** Whether items in the given category show the paid / value fields. */
 export function categoryShowsMoney(slug: string | null | undefined): boolean {
   return !slug || !MONEY_HIDDEN_CATEGORY_SLUGS.includes(slug);
+}
+
+/**
+ * Boolean custom fields (Built, Read, …) default to ON. Fills any boolean
+ * field the user never touched with `true` before saving.
+ */
+export function withBooleanDefaults(
+  template: FieldDefinition[],
+  values: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = { ...values };
+  for (const field of template) {
+    if (field.type === "boolean" && next[field.key] === undefined) {
+      next[field.key] = true;
+    }
+  }
+  return next;
 }

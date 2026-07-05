@@ -1,4 +1,9 @@
-import { categoryShowsMoney, type Category, type FieldDefinition } from "@mancave/shared";
+import {
+  categoryShowsMoney,
+  withBooleanDefaults,
+  type Category,
+  type FieldDefinition,
+} from "@mancave/shared";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, ImagePlus, X } from "lucide-react-native";
@@ -64,7 +69,6 @@ export function ItemForm({
   const [value, setValue] = useState(
     item?.current_value != null ? String(item.current_value) : "",
   );
-  const [notes, setNotes] = useState(item?.notes ?? "");
   const [customFields, setCustomFields] = useState<Record<string, unknown>>(
     item?.custom_fields ?? {},
   );
@@ -120,7 +124,7 @@ export function ItemForm({
       {
         category_id: categoryId,
         name: name.trim(),
-        brand: brand.trim() || null,
+        brand: brand.trim() || (category?.slug === "lego" ? "LEGO" : null),
         series: series.trim() || null,
         status,
         // Fields no longer editable in the form; keep existing values on edit.
@@ -131,8 +135,11 @@ export function ItemForm({
         currency: item?.currency ?? "CHF",
         purchase_date: item?.purchase_date ?? null,
         location: item?.location ?? null,
-        notes: notes.trim() || null,
-        custom_fields: customFields,
+        notes: item?.notes ?? null,
+        custom_fields: withBooleanDefaults(
+          category?.field_template ?? [],
+          customFields,
+        ),
       },
       newPhotos,
       removedIds,
@@ -227,7 +234,10 @@ export function ItemForm({
             active={categoryId === cat.id}
             activeColor={toRnColor(cat.color)}
             icon={<CategoryIcon icon={cat.icon} color={cat.color} size={18} iconSize={12} />}
-            onPress={() => setCategoryId(cat.id)}
+            onPress={() => {
+              setCategoryId(cat.id);
+              if (cat.slug === "lego" && !brand.trim()) setBrand("LEGO");
+            }}
           />
         ))}
       </View>
@@ -290,17 +300,6 @@ export function ItemForm({
         </>
       )}
 
-      <Field label="Notes">
-        <TextInput
-          style={[styles.input, styles.notesInput]}
-          placeholder="Anything worth remembering…"
-          placeholderTextColor={colors.muted}
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-        />
-      </Field>
-
       <Pressable
         style={[styles.saveButton, busy && { opacity: 0.6 }]}
         onPress={submit}
@@ -347,10 +346,11 @@ function CustomFieldInput({
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>{field.label}</Text>
         <Switch
-          value={Boolean(value)}
+          // Untouched booleans default to ON (see withBooleanDefaults).
+          value={value === undefined ? true : Boolean(value)}
           onValueChange={onChange}
           trackColor={{ false: colors.cardElevated, true: colors.primaryBorder }}
-          thumbColor={value ? colors.primary : colors.muted}
+          thumbColor={value === undefined || value ? colors.primary : colors.muted}
         />
       </View>
     );
@@ -414,7 +414,6 @@ const styles = StyleSheet.create({
     fontFamily: font.medium,
     fontSize: 15,
   },
-  notesInput: { height: 96, textAlignVertical: "top" },
   rowSplit: { flexDirection: "row", gap: 10 },
   photoRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   photoThumb: {

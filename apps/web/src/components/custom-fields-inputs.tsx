@@ -51,7 +51,8 @@ export function CustomFieldsInputs({
               </Label>
               <Switch
                 id={`cf-${field.key}`}
-                checked={Boolean(raw)}
+                // Untouched booleans default to ON (see withBooleanDefaults).
+                checked={raw === undefined ? true : Boolean(raw)}
                 onCheckedChange={(checked) => setValue(field.key, checked)}
               />
             </div>

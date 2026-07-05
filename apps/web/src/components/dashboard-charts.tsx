@@ -38,25 +38,42 @@ export function CategoryDonut({
       <CardHeader>
         <CardTitle className="text-base">Collection breakdown</CardTitle>
       </CardHeader>
-      <CardContent className="h-56">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              innerRadius="62%"
-              outerRadius="90%"
-              paddingAngle={3}
-              strokeWidth={0}
+      <CardContent>
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="name"
+                innerRadius="62%"
+                outerRadius="90%"
+                paddingAngle={3}
+                strokeWidth={0}
+              >
+                {data.map((entry) => (
+                  <Cell key={entry.name} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={tooltipStyle} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1.5">
+          {data.map((entry) => (
+            <span
+              key={entry.name}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
             >
-              {data.map((entry) => (
-                <Cell key={entry.name} fill={entry.color} />
-              ))}
-            </Pie>
-            <Tooltip contentStyle={tooltipStyle} />
-          </PieChart>
-        </ResponsiveContainer>
+              <span
+                className="size-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: entry.color }}
+              />
+              {entry.name}
+              <span className="font-medium text-foreground">{entry.value}</span>
+            </span>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

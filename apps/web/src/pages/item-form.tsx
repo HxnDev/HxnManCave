@@ -1,4 +1,8 @@
-import { categoryShowsMoney, type FieldDefinition } from "@mancave/shared";
+import {
+  categoryShowsMoney,
+  withBooleanDefaults,
+  type FieldDefinition,
+} from "@mancave/shared";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -171,7 +175,12 @@ export function ItemFormPage() {
   const saving = createItem.isPending || updateItem.isPending;
 
   const onSubmit = async (values: FormValues) => {
-    const input = toItemInput(values, effectiveCustomFields);
+    const brand =
+      values.brand.trim() || (selectedCategory?.slug === "lego" ? "LEGO" : "");
+    const input = toItemInput(
+      { ...values, brand },
+      withBooleanDefaults(template, effectiveCustomFields),
+    );
     try {
       if (isEdit && id) {
         await updateItem.mutateAsync({
@@ -256,6 +265,10 @@ export function ItemFormPage() {
                   onValueChange={(value) => {
                     form.setValue("category_id", value, { shouldValidate: true });
                     setCustomFields({});
+                    const picked = categories?.find((c) => c.id === value);
+                    if (picked?.slug === "lego" && !form.getValues("brand").trim()) {
+                      form.setValue("brand", "LEGO");
+                    }
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -412,11 +425,6 @@ export function ItemFormPage() {
                   </div>
                 </>
               )}
-
-              <div className="space-y-2 sm:col-span-2 lg:col-span-3">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" rows={2} {...form.register("notes")} />
-              </div>
             </CardContent>
           </Card>
 

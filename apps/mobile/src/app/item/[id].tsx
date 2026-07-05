@@ -158,13 +158,6 @@ export default function ItemDetailScreen() {
             </Card>
           )}
 
-          {item.notes && (
-            <Card style={{ gap: 8 }}>
-              <SectionTitle style={{ fontSize: 14 }}>Notes</SectionTitle>
-              <Text style={styles.notes}>{item.notes}</Text>
-            </Card>
-          )}
-
           <Pressable style={styles.deleteButton} onPress={confirmDelete}>
             <Trash2 size={16} color={colors.destructive} />
             <Text style={styles.deleteText}>
@@ -240,12 +233,6 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     flexShrink: 1,
     textAlign: "right",
-  },
-  notes: {
-    color: colors.textSecondary,
-    fontFamily: font.regular,
-    fontSize: 14.5,
-    lineHeight: 22,
   },
   deleteButton: {
     flexDirection: "row",
