@@ -1,5 +1,5 @@
 import type { FieldDefinition } from "@mancave/shared";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -146,7 +146,7 @@ export function ItemFormPage() {
   }, [isEdit, existingItem, searchParams]);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: standardSchemaResolver(formSchema),
     values: initialValues,
   });
 

@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
@@ -51,7 +51,7 @@ export function AuthPage() {
   const navigate = useNavigate();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(mode === "login" ? loginSchema : signupSchema),
+    resolver: standardSchemaResolver(mode === "login" ? loginSchema : signupSchema),
     defaultValues: { email: "", password: "", displayName: "" },
   });
 
