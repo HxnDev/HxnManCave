@@ -1,0 +1,530 @@
+import type { Category, FieldDefinition } from "@mancave/shared";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import { Camera, ImagePlus, X } from "lucide-react-native";
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import type { ItemInput, MobileItem } from "@/lib/api";
+import {
+  colors,
+  CONDITION_LABELS,
+  font,
+  radius,
+  STATUS_LABELS,
+  toRnColor,
+} from "@/lib/theme";
+import { CategoryIcon } from "./category-icon";
+import { Chip } from "./ui";
+
+const STATUSES = ["owned", "wishlist", "sold", "gifted"];
+const CONDITIONS = ["new", "used", "sealed", "damaged"];
+
+interface ExistingImage {
+  id: string;
+  url: string;
+}
+
+export function ItemForm({
+  categories,
+  item,
+  existingImages = [],
+  busy,
+  submitLabel,
+  onSubmit,
+}: {
+  categories: Category[];
+  item?: MobileItem;
+  existingImages?: ExistingImage[];
+  busy: boolean;
+  submitLabel: string;
+  onSubmit: (
+    input: ItemInput,
+    newPhotoUris: string[],
+    removedImageIds: string[],
+  ) => void;
+}) {
+  const [name, setName] = useState(item?.name ?? "");
+  const [brand, setBrand] = useState(item?.brand ?? "");
+  const [series, setSeries] = useState(item?.series ?? "");
+  const [categoryId, setCategoryId] = useState<string | null>(
+    item?.category_id ?? null,
+  );
+  const [status, setStatus] = useState(item?.status ?? "owned");
+  const [condition, setCondition] = useState<string | null>(item?.condition ?? null);
+  const [quantity, setQuantity] = useState(String(item?.quantity ?? 1));
+  const [price, setPrice] = useState(
+    item?.purchase_price != null ? String(item.purchase_price) : "",
+  );
+  const [value, setValue] = useState(
+    item?.current_value != null ? String(item.current_value) : "",
+  );
+  const [purchaseDate, setPurchaseDate] = useState(item?.purchase_date ?? "");
+  const [location, setLocation] = useState(item?.location ?? "");
+  const [notes, setNotes] = useState(item?.notes ?? "");
+  const [customFields, setCustomFields] = useState<Record<string, unknown>>(
+    item?.custom_fields ?? {},
+  );
+  const [newPhotos, setNewPhotos] = useState<string[]>([]);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
+
+  const category = useMemo(
+    () => categories.find((c) => c.id === categoryId),
+    [categories, categoryId],
+  );
+
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Camera blocked", "Allow camera access in system settings.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 1 });
+    if (!result.canceled && result.assets[0]) {
+      setNewPhotos((prev) => [...prev, result.assets[0].uri]);
+    }
+  };
+
+  const pickPhotos = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images",
+      allowsMultipleSelection: true,
+      selectionLimit: 6,
+      quality: 1,
+    });
+    if (!result.canceled) {
+      setNewPhotos((prev) => [...prev, ...result.assets.map((a) => a.uri)]);
+    }
+  };
+
+  const parseNumber = (raw: string): number | null => {
+    if (!raw.trim()) return null;
+    const parsed = Number(raw.replace(",", "."));
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const submit = () => {
+    if (!name.trim()) {
+      Alert.alert("Missing name", "Give the item a name.");
+      return;
+    }
+    if (!categoryId) {
+      Alert.alert("Missing category", "Pick a shelf for this item.");
+      return;
+    }
+    if (purchaseDate.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(purchaseDate.trim())) {
+      Alert.alert("Invalid date", "Use the YYYY-MM-DD format, e.g. 2026-07-05");
+      return;
+    }
+
+    onSubmit(
+      {
+        category_id: categoryId,
+        name: name.trim(),
+        brand: brand.trim() || null,
+        series: series.trim() || null,
+        status,
+        condition,
+        quantity: Math.max(1, Math.round(parseNumber(quantity) ?? 1)),
+        purchase_price: parseNumber(price),
+        current_value: parseNumber(value),
+        currency: item?.currency ?? "CHF",
+        purchase_date: purchaseDate.trim() || null,
+        location: location.trim() || null,
+        notes: notes.trim() || null,
+        custom_fields: customFields,
+      },
+      newPhotos,
+      removedIds,
+    );
+  };
+
+  const visibleExisting = existingImages.filter(
+    (img) => !removedIds.includes(img.id),
+  );
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* Photos */}
+      <Text style={styles.label}>Photos</Text>
+      <View style={styles.photoRow}>
+        {visibleExisting.map((img) => (
+          <View key={img.id}>
+            <Image source={{ uri: img.url }} style={styles.photoThumb} contentFit="cover" />
+            <Pressable
+              style={styles.photoRemove}
+              onPress={() => setRemovedIds((prev) => [...prev, img.id])}
+            >
+              <X size={12} color={colors.text} strokeWidth={3} />
+            </Pressable>
+          </View>
+        ))}
+        {newPhotos.map((uri, index) => (
+          <View key={uri}>
+            <Image source={{ uri }} style={styles.photoThumb} contentFit="cover" />
+            <Pressable
+              style={styles.photoRemove}
+              onPress={() =>
+                setNewPhotos((prev) => prev.filter((_, i) => i !== index))
+              }
+            >
+              <X size={12} color={colors.text} strokeWidth={3} />
+            </Pressable>
+          </View>
+        ))}
+        <Pressable style={styles.photoAdd} onPress={takePhoto}>
+          <Camera size={20} color={colors.primary} />
+          <Text style={styles.photoAddText}>Camera</Text>
+        </Pressable>
+        <Pressable style={styles.photoAdd} onPress={pickPhotos}>
+          <ImagePlus size={20} color={colors.primary} />
+          <Text style={styles.photoAddText}>Gallery</Text>
+        </Pressable>
+      </View>
+
+      {/* Basics */}
+      <Field label="Name *">
+        <TextInput
+          style={styles.input}
+          placeholder="LEGO McLaren F1..."
+          placeholderTextColor={colors.muted}
+          value={name}
+          onChangeText={setName}
+        />
+      </Field>
+      <View style={styles.rowSplit}>
+        <Field label="Brand" style={{ flex: 1 }}>
+          <TextInput
+            style={styles.input}
+            placeholder="LEGO"
+            placeholderTextColor={colors.muted}
+            value={brand}
+            onChangeText={setBrand}
+          />
+        </Field>
+        <Field label="Series" style={{ flex: 1 }}>
+          <TextInput
+            style={styles.input}
+            placeholder="Technic"
+            placeholderTextColor={colors.muted}
+            value={series}
+            onChangeText={setSeries}
+          />
+        </Field>
+      </View>
+
+      {/* Category */}
+      <Text style={styles.label}>Shelf *</Text>
+      <View style={styles.chipWrap}>
+        {categories.map((cat) => (
+          <Chip
+            key={cat.id}
+            label={cat.name}
+            active={categoryId === cat.id}
+            activeColor={toRnColor(cat.color)}
+            icon={<CategoryIcon icon={cat.icon} color={cat.color} size={18} iconSize={12} />}
+            onPress={() => setCategoryId(cat.id)}
+          />
+        ))}
+      </View>
+
+      {/* Status + condition */}
+      <Text style={styles.label}>Status</Text>
+      <View style={styles.chipWrap}>
+        {STATUSES.map((entry) => (
+          <Chip
+            key={entry}
+            label={STATUS_LABELS[entry]}
+            active={status === entry}
+            onPress={() => setStatus(entry as typeof status)}
+          />
+        ))}
+      </View>
+      <Text style={styles.label}>Condition</Text>
+      <View style={styles.chipWrap}>
+        {CONDITIONS.map((entry) => (
+          <Chip
+            key={entry}
+            label={CONDITION_LABELS[entry]}
+            active={condition === entry}
+            onPress={() => setCondition(condition === entry ? null : entry)}
+          />
+        ))}
+      </View>
+
+      {/* Numbers */}
+      <View style={styles.rowSplit}>
+        <Field label="Quantity" style={{ flex: 1 }}>
+          <TextInput
+            style={styles.input}
+            value={quantity}
+            onChangeText={setQuantity}
+            keyboardType="number-pad"
+          />
+        </Field>
+        <Field label={`Paid (${item?.currency ?? "CHF"})`} style={{ flex: 1 }}>
+          <TextInput
+            style={styles.input}
+            placeholder="49.99"
+            placeholderTextColor={colors.muted}
+            value={price}
+            onChangeText={setPrice}
+            keyboardType="decimal-pad"
+          />
+        </Field>
+        <Field label={`Value (${item?.currency ?? "CHF"})`} style={{ flex: 1 }}>
+          <TextInput
+            style={styles.input}
+            placeholder="99.99"
+            placeholderTextColor={colors.muted}
+            value={value}
+            onChangeText={setValue}
+            keyboardType="decimal-pad"
+          />
+        </Field>
+      </View>
+      <View style={styles.rowSplit}>
+        <Field label="Purchase date" style={{ flex: 1 }}>
+          <TextInput
+            style={styles.input}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor={colors.muted}
+            value={purchaseDate}
+            onChangeText={setPurchaseDate}
+          />
+        </Field>
+        <Field label="Location" style={{ flex: 1 }}>
+          <TextInput
+            style={styles.input}
+            placeholder="Living room shelf"
+            placeholderTextColor={colors.muted}
+            value={location}
+            onChangeText={setLocation}
+          />
+        </Field>
+      </View>
+
+      {/* Custom fields for the selected category */}
+      {category && category.field_template.length > 0 && (
+        <>
+          <Text style={[styles.label, { marginTop: 4 }]}>
+            {category.name} details
+          </Text>
+          {category.field_template.map((field) => (
+            <CustomFieldInput
+              key={field.key}
+              field={field}
+              value={customFields[field.key]}
+              onChange={(newValue) =>
+                setCustomFields((prev) => ({ ...prev, [field.key]: newValue }))
+              }
+            />
+          ))}
+        </>
+      )}
+
+      <Field label="Notes">
+        <TextInput
+          style={[styles.input, styles.notesInput]}
+          placeholder="Anything worth remembering…"
+          placeholderTextColor={colors.muted}
+          value={notes}
+          onChangeText={setNotes}
+          multiline
+        />
+      </Field>
+
+      <Pressable
+        style={[styles.saveButton, busy && { opacity: 0.6 }]}
+        onPress={submit}
+        disabled={busy}
+      >
+        {busy ? (
+          <ActivityIndicator color={colors.onPrimary} />
+        ) : (
+          <Text style={styles.saveText}>{submitLabel}</Text>
+        )}
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+function Field({
+  label,
+  children,
+  style,
+}: {
+  label: string;
+  children: React.ReactNode;
+  style?: object;
+}) {
+  return (
+    <View style={style}>
+      <Text style={styles.label}>{label}</Text>
+      {children}
+    </View>
+  );
+}
+
+function CustomFieldInput({
+  field,
+  value,
+  onChange,
+}: {
+  field: FieldDefinition;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}) {
+  if (field.type === "boolean") {
+    return (
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>{field.label}</Text>
+        <Switch
+          value={Boolean(value)}
+          onValueChange={onChange}
+          trackColor={{ false: colors.cardElevated, true: colors.primaryBorder }}
+          thumbColor={value ? colors.primary : colors.muted}
+        />
+      </View>
+    );
+  }
+
+  if (field.type === "select" && field.options) {
+    return (
+      <Field label={field.label}>
+        <View style={styles.chipWrap}>
+          {field.options.map((option) => (
+            <Chip
+              key={option}
+              label={option}
+              active={value === option}
+              onPress={() => onChange(value === option ? null : option)}
+            />
+          ))}
+        </View>
+      </Field>
+    );
+  }
+
+  return (
+    <Field label={field.unit ? `${field.label} (${field.unit})` : field.label}>
+      <TextInput
+        style={styles.input}
+        placeholder={field.type === "date" ? "YYYY-MM-DD" : field.label}
+        placeholderTextColor={colors.muted}
+        value={value == null ? "" : String(value)}
+        onChangeText={(text) => {
+          if (field.type === "number") {
+            const parsed = Number(text.replace(",", "."));
+            onChange(text.trim() === "" ? null : Number.isNaN(parsed) ? text : parsed);
+          } else {
+            onChange(text);
+          }
+        }}
+        keyboardType={field.type === "number" ? "decimal-pad" : "default"}
+      />
+    </Field>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: 20, gap: 14, paddingBottom: 56 },
+  label: {
+    color: colors.textSecondary,
+    fontFamily: font.semibold,
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.text,
+    backgroundColor: colors.input,
+    fontFamily: font.medium,
+    fontSize: 15,
+  },
+  notesInput: { height: 96, textAlignVertical: "top" },
+  rowSplit: { flexDirection: "row", gap: 10 },
+  photoRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  photoThumb: {
+    width: 76,
+    height: 76,
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
+  },
+  photoRemove: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.destructive,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoAdd: {
+    width: 76,
+    height: 76,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: colors.primaryBorder,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  photoAddText: {
+    color: colors.primary,
+    fontFamily: font.semibold,
+    fontSize: 11,
+  },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.input,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  switchLabel: {
+    color: colors.text,
+    fontFamily: font.medium,
+    fontSize: 15,
+  },
+  saveButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  saveText: {
+    color: colors.onPrimary,
+    fontFamily: font.extrabold,
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
+});

@@ -1,11 +1,7 @@
 import { Redirect, Tabs } from "expo-router";
-import { Text } from "react-native";
+import { ChartPie, LayoutGrid, Library, Settings } from "lucide-react-native";
 import { useAuth } from "@/lib/auth";
-import { colors } from "@/lib/theme";
-
-function TabIcon({ glyph, focused }: { glyph: string; focused: boolean }) {
-  return <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.45 }}>{glyph}</Text>;
-}
+import { colors, font } from "@/lib/theme";
 
 export default function TabsLayout() {
   const { session, loading } = useAuth();
@@ -17,12 +13,16 @@ export default function TabsLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: "700" },
+        headerTitleStyle: { fontFamily: font.extrabold, fontSize: 24 },
+        headerTitleAlign: "left",
         headerShadowVisible: false,
         tabBarStyle: {
-          backgroundColor: colors.card,
+          backgroundColor: colors.backgroundRaised,
           borderTopColor: colors.border,
+          height: 64,
+          paddingTop: 6,
         },
+        tabBarLabelStyle: { fontFamily: font.semibold, fontSize: 11 },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
         sceneStyle: { backgroundColor: colors.background },
@@ -32,21 +32,29 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Shelves",
-          tabBarIcon: ({ focused }) => <TabIcon glyph="🗄️" focused={focused} />,
+          headerShown: false,
+          tabBarIcon: ({ color }) => <Library size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="categories"
+        options={{
+          title: "Categories",
+          tabBarIcon: ({ color }) => <LayoutGrid size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="dashboard"
         options={{
           title: "Dashboard",
-          tabBarIcon: ({ focused }) => <TabIcon glyph="📊" focused={focused} />,
+          tabBarIcon: ({ color }) => <ChartPie size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",
-          tabBarIcon: ({ focused }) => <TabIcon glyph="⚙️" focused={focused} />,
+          tabBarIcon: ({ color }) => <Settings size={22} color={color} />,
         }}
       />
     </Tabs>

@@ -1,4 +1,4 @@
-import type { Category, Item, ItemImage } from "@mancave/shared";
+import type { Category, Item, ItemImage, Profile } from "@mancave/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { decode } from "base64-arraybuffer";
 import * as FileSystem from "expo-file-system/legacy";
@@ -54,6 +54,168 @@ export function useCategories() {
   });
 }
 
+export function useProfile() {
+  return useQuery({
+    queryKey: ["profile"],
+    queryFn: async (): Promise<Profile | null> => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userData.user.id)
+        .single();
+      if (error) throw error;
+      return data as Profile;
+    },
+  });
+}
+
+export interface CategoryInput {
+  name: string;
+  icon: string;
+  color: string;
+}
+
+function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "category"
+  );
+}
+
+export function useCreateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CategoryInput) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Not signed in");
+
+      const { error } = await supabase.from("categories").insert({
+        ...input,
+        slug: slugify(input.name),
+        field_template: [],
+        user_id: userData.user.id,
+        sort_order: 100,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+  });
+}
+
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...input }: CategoryInput & { id: string }) => {
+      const { error } = await supabase
+        .from("categories")
+        .update(input)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["categories"] });
+      void queryClient.invalidateQueries({ queryKey: ["items"] });
+    },
+  });
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("categories").delete().eq("id", id);
+      if (error) {
+        if (error.code === "23503") {
+          throw new Error(
+            "This category still has items. Move or delete them first.",
+          );
+        }
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["categories"] });
+    },
+  });
+}
+
+/** Resolve an avatar to a displayable URL (http URL from OAuth, or storage path). */
+export function useAvatarUrl(profile: Profile | null | undefined) {
+  return useQuery({
+    queryKey: ["avatar-url", profile?.avatar_url],
+    enabled: Boolean(profile?.avatar_url),
+    queryFn: async (): Promise<string | null> => {
+      const raw = profile!.avatar_url!;
+      if (raw.startsWith("http")) return raw;
+      const { data, error } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(raw, 3600);
+      if (error) return null;
+      return data.signedUrl;
+    },
+  });
+}
+
+export function useUploadAvatar() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (uri: string) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Not signed in");
+
+      const manipulated = await manipulateAsync(
+        uri,
+        [{ resize: { width: 512 } }],
+        { compress: 0.8, format: SaveFormat.JPEG },
+      );
+      const base64 = await FileSystem.readAsStringAsync(manipulated.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const path = `${userData.user.id}/avatar/${Date.now()}.jpg`;
+      const { error } = await supabase.storage
+        .from(BUCKET)
+        .upload(path, decode(base64), { contentType: "image/jpeg" });
+      if (error) throw error;
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: path })
+        .eq("id", userData.user.id);
+      if (profileError) throw profileError;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["profile"] });
+      void queryClient.invalidateQueries({ queryKey: ["avatar-url"] });
+    },
+  });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (displayName: string) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Not signed in");
+      const { error } = await supabase
+        .from("profiles")
+        .update({ display_name: displayName })
+        .eq("id", userData.user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
+  });
+}
+
 export function useItems() {
   return useQuery({
     queryKey: ["items"],
@@ -89,15 +251,15 @@ export function useItems() {
 
 export function useItemImages(item: MobileItem | undefined) {
   return useQuery({
-    queryKey: ["item-images", item?.id],
+    queryKey: ["item-images", item?.id, item?.images.length],
     enabled: Boolean(item && item.images.length > 0),
-    queryFn: async (): Promise<string[]> => {
+    queryFn: async (): Promise<{ id: string; url: string }[]> => {
       const urlMap = await getSignedUrls(
         item!.images.map((img) => img.storage_path),
       );
       return item!.images
-        .map((img) => urlMap.get(img.storage_path))
-        .filter((url): url is string => Boolean(url));
+        .map((img) => ({ id: img.id, url: urlMap.get(img.storage_path) ?? "" }))
+        .filter((entry) => entry.url !== "");
     },
   });
 }
@@ -108,6 +270,7 @@ async function uploadPhoto(
   itemId: string,
   uri: string,
   sortOrder: number,
+  isMain: boolean,
 ): Promise<void> {
   const manipulated = await manipulateAsync(
     uri,
@@ -130,19 +293,26 @@ async function uploadPhoto(
     user_id: userId,
     storage_path: path,
     sort_order: sortOrder,
-    is_main: sortOrder === 0,
+    is_main: isMain,
   });
   if (rowError) throw rowError;
 }
 
-export interface QuickItemInput {
+export interface ItemInput {
   category_id: string;
   name: string;
   brand: string | null;
+  series: string | null;
   status: string;
+  condition: string | null;
+  quantity: number;
   purchase_price: number | null;
+  current_value: number | null;
   currency: string;
+  purchase_date: string | null;
+  location: string | null;
   notes: string | null;
+  custom_fields: Record<string, unknown>;
 }
 
 export function useCreateItem() {
@@ -152,7 +322,7 @@ export function useCreateItem() {
       input,
       photoUris,
     }: {
-      input: QuickItemInput;
+      input: ItemInput;
       photoUris: string[];
     }) => {
       const { data: userData } = await supabase.auth.getUser();
@@ -167,12 +337,78 @@ export function useCreateItem() {
 
       const itemId = (data as { id: string }).id;
       for (let i = 0; i < photoUris.length; i++) {
-        await uploadPhoto(userData.user.id, itemId, photoUris[i], i);
+        await uploadPhoto(userData.user.id, itemId, photoUris[i], i, i === 0);
       }
       return itemId;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["items"] });
+    },
+  });
+}
+
+export function useUpdateItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      item,
+      input,
+      newPhotoUris,
+      removedImageIds,
+    }: {
+      item: MobileItem;
+      input: ItemInput;
+      newPhotoUris: string[];
+      removedImageIds: string[];
+    }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Not signed in");
+
+      const { error } = await supabase
+        .from("items")
+        .update({ ...input, updated_at: new Date().toISOString() })
+        .eq("id", item.id);
+      if (error) throw error;
+
+      if (removedImageIds.length > 0) {
+        const removed = item.images.filter((img) =>
+          removedImageIds.includes(img.id),
+        );
+        await supabase.storage
+          .from(BUCKET)
+          .remove(removed.map((img) => img.storage_path));
+        const { error: imgError } = await supabase
+          .from("item_images")
+          .delete()
+          .in("id", removedImageIds);
+        if (imgError) throw imgError;
+      }
+
+      const remaining = item.images.filter(
+        (img) => !removedImageIds.includes(img.id),
+      );
+      const hasMain = remaining.some((img) => img.is_main);
+      let nextSort = remaining.length;
+      for (let i = 0; i < newPhotoUris.length; i++) {
+        await uploadPhoto(
+          userData.user.id,
+          item.id,
+          newPhotoUris[i],
+          nextSort++,
+          !hasMain && i === 0,
+        );
+      }
+
+      if (!hasMain && newPhotoUris.length === 0 && remaining.length > 0) {
+        await supabase
+          .from("item_images")
+          .update({ is_main: true })
+          .eq("id", remaining[0].id);
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["items"] });
+      void queryClient.invalidateQueries({ queryKey: ["item-images"] });
     },
   });
 }

@@ -1,5 +1,6 @@
 import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
+import { Pencil, Trash2 } from "lucide-react-native";
 import {
   ActivityIndicator,
   Alert,
@@ -10,8 +11,10 @@ import {
   Text,
   View,
 } from "react-native";
+import { CategoryIcon } from "@/components/category-icon";
+import { Card, SectionTitle, StatusPill } from "@/components/ui";
 import { useDeleteItem, useItemImages, useItems } from "@/lib/api";
-import { colors, radius, statusColors } from "@/lib/theme";
+import { colors, CONDITION_LABELS, font, radius } from "@/lib/theme";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -28,7 +31,7 @@ export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: items, isLoading } = useItems();
   const item = items?.find((entry) => entry.id === id);
-  const { data: imageUrls } = useItemImages(item);
+  const { data: images } = useItemImages(item);
   const deleteItem = useDeleteItem();
 
   if (isLoading) {
@@ -42,14 +45,18 @@ export default function ItemDetailScreen() {
   if (!item) {
     return (
       <View style={styles.center}>
-        <Text style={{ color: colors.muted }}>Item not found.</Text>
+        <Text style={{ color: colors.muted, fontFamily: font.medium }}>
+          Item not found.
+        </Text>
       </View>
     );
   }
 
-  const status = statusColors[item.status] ?? statusColors.owned;
   const customFields = Object.entries(item.custom_fields ?? {}).filter(
     ([, value]) => value !== null && value !== "" && value !== undefined,
+  );
+  const fieldLabels = new Map(
+    item.category.field_template.map((field) => [field.key, field]),
   );
 
   const confirmDelete = () => {
@@ -70,44 +77,56 @@ export default function ItemDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: item.name }} />
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-        {imageUrls && imageUrls.length > 0 ? (
+      <Stack.Screen
+        options={{
+          title: "",
+          headerRight: () => (
+            <Pressable
+              style={styles.editButton}
+              onPress={() =>
+                router.push({ pathname: "/edit/[id]", params: { id: item.id } })
+              }
+            >
+              <Pencil size={15} color={colors.onPrimary} strokeWidth={2.4} />
+              <Text style={styles.editText}>Edit</Text>
+            </Pressable>
+          ),
+        }}
+      />
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 48 }}>
+        {images && images.length > 0 ? (
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
-            {imageUrls.map((url) => (
+            {images.map((image) => (
               <Image
-                key={url}
-                source={{ uri: url }}
-                style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.9 }}
+                key={image.id}
+                source={{ uri: image.url }}
+                style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.85 }}
                 contentFit="cover"
               />
             ))}
           </ScrollView>
         ) : (
           <View style={[styles.noImage, { width: SCREEN_WIDTH }]}>
-            <Text style={{ fontSize: 44 }}>📦</Text>
+            <CategoryIcon icon={item.category.icon} color={item.category.color} size={72} />
           </View>
         )}
 
-        <View style={{ padding: 16, gap: 16 }}>
+        <View style={styles.body}>
           <View>
             <View style={styles.titleRow}>
               <Text style={styles.title}>{item.name}</Text>
-              <View style={[styles.statusPill, { backgroundColor: status.bg }]}>
-                <Text style={[styles.statusPillText, { color: status.text }]}>
-                  {item.status}
-                </Text>
-              </View>
+              <StatusPill status={item.status} />
             </View>
-            <Text style={styles.category}>
-              {item.category.name}
-              {item.brand ? ` · ${item.brand}` : ""}
+            <Text style={styles.subtitle}>
+              {[item.category.name, item.brand, item.series].filter(Boolean).join(" · ")}
             </Text>
           </View>
 
-          <View style={styles.card}>
+          <Card style={{ gap: 12 }}>
             <Row label="Quantity" value={String(item.quantity)} />
-            {item.condition && <Row label="Condition" value={item.condition} />}
+            {item.condition && (
+              <Row label="Condition" value={CONDITION_LABELS[item.condition] ?? item.condition} />
+            )}
             {item.purchase_price !== null && (
               <Row
                 label="Purchase price"
@@ -122,37 +141,38 @@ export default function ItemDetailScreen() {
             )}
             {item.purchase_date && <Row label="Purchased" value={item.purchase_date} />}
             {item.location && <Row label="Location" value={item.location} />}
-          </View>
+          </Card>
 
           {customFields.length > 0 && (
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Details</Text>
-              {customFields.map(([key, value]) => (
-                <Row
-                  key={key}
-                  label={key.replaceAll("_", " ")}
-                  value={typeof value === "boolean" ? (value ? "Yes" : "No") : String(value)}
-                />
-              ))}
-            </View>
+            <Card style={{ gap: 12 }}>
+              <SectionTitle style={{ fontSize: 14 }}>Details</SectionTitle>
+              {customFields.map(([key, value]) => {
+                const def = fieldLabels.get(key);
+                const label = def?.label ?? key.replaceAll("_", " ");
+                const display =
+                  typeof value === "boolean"
+                    ? value
+                      ? "Yes"
+                      : "No"
+                    : `${String(value)}${def?.unit ? ` ${def.unit}` : ""}`;
+                return <Row key={key} label={label} value={display} />;
+              })}
+            </Card>
           )}
 
           {item.notes && (
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Notes</Text>
+            <Card style={{ gap: 8 }}>
+              <SectionTitle style={{ fontSize: 14 }}>Notes</SectionTitle>
               <Text style={styles.notes}>{item.notes}</Text>
-            </View>
+            </Card>
           )}
 
           <Pressable style={styles.deleteButton} onPress={confirmDelete}>
+            <Trash2 size={16} color={colors.destructive} />
             <Text style={styles.deleteText}>
               {deleteItem.isPending ? "Deleting…" : "Delete item"}
             </Text>
           </Pressable>
-
-          <Text style={styles.hint}>
-            To edit details or manage photos, open this item on vault.hxndev.com.
-          </Text>
         </View>
       </ScrollView>
     </>
@@ -167,35 +187,45 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.background,
   },
+  editButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  editText: {
+    color: colors.onPrimary,
+    fontFamily: font.bold,
+    fontSize: 13,
+  },
   noImage: {
-    height: 220,
-    backgroundColor: colors.card,
+    height: 240,
+    backgroundColor: colors.backgroundRaised,
     alignItems: "center",
     justifyContent: "center",
   },
+  body: { padding: 20, gap: 16 },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
   },
-  title: { color: colors.text, fontSize: 22, fontWeight: "800", flex: 1 },
-  statusPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  title: {
+    color: colors.text,
+    fontFamily: font.extrabold,
+    fontSize: 23,
+    flex: 1,
   },
-  statusPillText: { fontSize: 11, fontWeight: "700", textTransform: "capitalize" },
-  category: { color: colors.muted, marginTop: 4 },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    gap: 10,
+  subtitle: {
+    color: colors.muted,
+    fontFamily: font.medium,
+    fontSize: 14,
+    marginTop: 4,
   },
-  sectionTitle: { color: colors.text, fontWeight: "700", fontSize: 14 },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -203,18 +233,36 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     color: colors.muted,
-    fontSize: 13,
-    textTransform: "capitalize",
+    fontFamily: font.medium,
+    fontSize: 13.5,
   },
-  rowValue: { color: colors.text, fontSize: 13, fontWeight: "600", flexShrink: 1 },
-  notes: { color: colors.text, fontSize: 14, lineHeight: 21 },
+  rowValue: {
+    color: colors.text,
+    fontFamily: font.semibold,
+    fontSize: 13.5,
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  notes: {
+    color: colors.textSecondary,
+    fontFamily: font.regular,
+    fontSize: 14.5,
+    lineHeight: 22,
+  },
   deleteButton: {
-    borderWidth: 1,
-    borderColor: "rgba(229,72,77,0.4)",
-    borderRadius: radius.md,
-    paddingVertical: 13,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "rgba(240,106,110,0.35)",
+    backgroundColor: colors.destructiveSoft,
+    borderRadius: radius.md,
+    paddingVertical: 14,
   },
-  deleteText: { color: colors.destructive, fontWeight: "700" },
-  hint: { color: colors.muted, fontSize: 12, textAlign: "center" },
+  deleteText: {
+    color: colors.destructive,
+    fontFamily: font.bold,
+    fontSize: 14,
+  },
 });
