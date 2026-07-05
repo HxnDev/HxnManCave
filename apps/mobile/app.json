@@ -8,6 +8,12 @@
     "scheme": "mancave",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0F1714",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/60a65b0a-3f70-4fa3-8b15-b31bc385448b"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.hxndev.mancave"
