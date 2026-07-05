@@ -1,4 +1,4 @@
-import type { Category, FieldDefinition } from "@mancave/shared";
+import { categoryShowsMoney, type Category, type FieldDefinition } from "@mancave/shared";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, ImagePlus, X } from "lucide-react-native";
@@ -17,7 +17,6 @@ import {
 import type { ItemInput, MobileItem } from "@/lib/api";
 import {
   colors,
-  CONDITION_LABELS,
   font,
   radius,
   STATUS_LABELS,
@@ -26,8 +25,7 @@ import {
 import { CategoryIcon } from "./category-icon";
 import { Chip } from "./ui";
 
-const STATUSES = ["owned", "wishlist", "sold", "gifted"];
-const CONDITIONS = ["new", "used", "sealed", "damaged"];
+const STATUSES = ["owned", "wishlist"];
 
 interface ExistingImage {
   id: string;
@@ -60,16 +58,12 @@ export function ItemForm({
     item?.category_id ?? null,
   );
   const [status, setStatus] = useState(item?.status ?? "owned");
-  const [condition, setCondition] = useState<string | null>(item?.condition ?? null);
-  const [quantity, setQuantity] = useState(String(item?.quantity ?? 1));
   const [price, setPrice] = useState(
     item?.purchase_price != null ? String(item.purchase_price) : "",
   );
   const [value, setValue] = useState(
     item?.current_value != null ? String(item.current_value) : "",
   );
-  const [purchaseDate, setPurchaseDate] = useState(item?.purchase_date ?? "");
-  const [location, setLocation] = useState(item?.location ?? "");
   const [notes, setNotes] = useState(item?.notes ?? "");
   const [customFields, setCustomFields] = useState<Record<string, unknown>>(
     item?.custom_fields ?? {},
@@ -121,10 +115,6 @@ export function ItemForm({
       Alert.alert("Missing category", "Pick a shelf for this item.");
       return;
     }
-    if (purchaseDate.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(purchaseDate.trim())) {
-      Alert.alert("Invalid date", "Use the YYYY-MM-DD format, e.g. 2026-07-05");
-      return;
-    }
 
     onSubmit(
       {
@@ -133,13 +123,14 @@ export function ItemForm({
         brand: brand.trim() || null,
         series: series.trim() || null,
         status,
-        condition,
-        quantity: Math.max(1, Math.round(parseNumber(quantity) ?? 1)),
+        // Fields no longer editable in the form; keep existing values on edit.
+        condition: item?.condition ?? null,
+        quantity: item?.quantity ?? 1,
         purchase_price: parseNumber(price),
         current_value: parseNumber(value),
         currency: item?.currency ?? "CHF",
-        purchase_date: purchaseDate.trim() || null,
-        location: location.trim() || null,
+        purchase_date: item?.purchase_date ?? null,
+        location: item?.location ?? null,
         notes: notes.trim() || null,
         custom_fields: customFields,
       },
@@ -241,7 +232,7 @@ export function ItemForm({
         ))}
       </View>
 
-      {/* Status + condition */}
+      {/* Status */}
       <Text style={styles.label}>Status</Text>
       <View style={styles.chipWrap}>
         {STATUSES.map((entry) => (
@@ -253,69 +244,32 @@ export function ItemForm({
           />
         ))}
       </View>
-      <Text style={styles.label}>Condition</Text>
-      <View style={styles.chipWrap}>
-        {CONDITIONS.map((entry) => (
-          <Chip
-            key={entry}
-            label={CONDITION_LABELS[entry]}
-            active={condition === entry}
-            onPress={() => setCondition(condition === entry ? null : entry)}
-          />
-        ))}
-      </View>
 
-      {/* Numbers */}
-      <View style={styles.rowSplit}>
-        <Field label="Quantity" style={{ flex: 1 }}>
-          <TextInput
-            style={styles.input}
-            value={quantity}
-            onChangeText={setQuantity}
-            keyboardType="number-pad"
-          />
-        </Field>
-        <Field label={`Paid (${item?.currency ?? "CHF"})`} style={{ flex: 1 }}>
-          <TextInput
-            style={styles.input}
-            placeholder="49.99"
-            placeholderTextColor={colors.muted}
-            value={price}
-            onChangeText={setPrice}
-            keyboardType="decimal-pad"
-          />
-        </Field>
-        <Field label={`Value (${item?.currency ?? "CHF"})`} style={{ flex: 1 }}>
-          <TextInput
-            style={styles.input}
-            placeholder="99.99"
-            placeholderTextColor={colors.muted}
-            value={value}
-            onChangeText={setValue}
-            keyboardType="decimal-pad"
-          />
-        </Field>
-      </View>
-      <View style={styles.rowSplit}>
-        <Field label="Purchase date" style={{ flex: 1 }}>
-          <TextInput
-            style={styles.input}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.muted}
-            value={purchaseDate}
-            onChangeText={setPurchaseDate}
-          />
-        </Field>
-        <Field label="Location" style={{ flex: 1 }}>
-          <TextInput
-            style={styles.input}
-            placeholder="Living room shelf"
-            placeholderTextColor={colors.muted}
-            value={location}
-            onChangeText={setLocation}
-          />
-        </Field>
-      </View>
+      {/* Money (hidden for some categories) */}
+      {categoryShowsMoney(category?.slug) && (
+        <View style={styles.rowSplit}>
+          <Field label={`Paid (${item?.currency ?? "CHF"})`} style={{ flex: 1 }}>
+            <TextInput
+              style={styles.input}
+              placeholder="49.99"
+              placeholderTextColor={colors.muted}
+              value={price}
+              onChangeText={setPrice}
+              keyboardType="decimal-pad"
+            />
+          </Field>
+          <Field label={`Value (${item?.currency ?? "CHF"})`} style={{ flex: 1 }}>
+            <TextInput
+              style={styles.input}
+              placeholder="99.99"
+              placeholderTextColor={colors.muted}
+              value={value}
+              onChangeText={setValue}
+              keyboardType="decimal-pad"
+            />
+          </Field>
+        </View>
+      )}
 
       {/* Custom fields for the selected category */}
       {category && category.field_template.length > 0 && (

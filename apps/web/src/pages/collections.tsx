@@ -384,7 +384,7 @@ export function CollectionsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {Object.entries(STATUS_LABELS).map(([value, label]) => (
+          {(["owned", "wishlist"] as const).map((value) => (
             <button
               key={value}
               type="button"
@@ -396,7 +396,7 @@ export function CollectionsPage() {
                   : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
-              {label}
+              {STATUS_LABELS[value]}
             </button>
           ))}
 

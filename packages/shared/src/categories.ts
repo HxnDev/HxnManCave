@@ -93,18 +93,11 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     color: "oklch(0.62 0.19 350)",
     field_template: [
       { key: "size_ml", label: "Size", type: "number", unit: "ml" },
-      { key: "remaining_pct", label: "Remaining", type: "number", unit: "%" },
       {
         key: "concentration",
         label: "Concentration",
         type: "select",
         options: ["EDT", "EDP", "Parfum", "Extrait", "Cologne"],
-      },
-      {
-        key: "season",
-        label: "Season",
-        type: "select",
-        options: ["Summer", "Winter", "All-year"],
       },
     ],
   },
@@ -113,10 +106,7 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     slug: "card-games",
     icon: "spade",
     color: "oklch(0.63 0.2 15)",
-    field_template: [
-      { key: "players", label: "Players", type: "text" },
-      { key: "complete", label: "Complete", type: "boolean" },
-    ],
+    field_template: [],
   },
   {
     name: "Online Games",
@@ -136,7 +126,6 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
         type: "select",
         options: ["Digital", "Physical"],
       },
-      { key: "completed", label: "Completed", type: "boolean" },
     ],
   },
   {
@@ -158,3 +147,23 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     field_template: [],
   },
 ];
+
+/**
+ * Category slugs where the money fields (paid / current value / currency)
+ * are hidden in item forms and detail views.
+ */
+export const MONEY_HIDDEN_CATEGORY_SLUGS: string[] = [
+  "funko",
+  "books",
+  "perfumes",
+  "souvenirs",
+  "keychains",
+  "card-games",
+  "online-games",
+  "electronics",
+];
+
+/** Whether items in the given category show the paid / value fields. */
+export function categoryShowsMoney(slug: string | null | undefined): boolean {
+  return !slug || !MONEY_HIDDEN_CATEGORY_SLUGS.includes(slug);
+}

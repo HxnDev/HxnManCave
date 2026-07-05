@@ -1,9 +1,7 @@
-import type { FieldDefinition } from "@mancave/shared";
+import { categoryShowsMoney, type FieldDefinition } from "@mancave/shared";
 import {
   ArrowLeft,
-  Calendar,
   ImageOff,
-  MapPin,
   Pencil,
   Tag as TagIcon,
   Trash2,
@@ -14,7 +12,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import { CategoryIcon } from "@/components/category-icon";
 import { PageTransition } from "@/components/motion/page-transition";
-import { StatusBadge, CONDITION_LABELS } from "@/components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -197,14 +195,6 @@ export function ItemDetailPage() {
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <StatusBadge status={item.status} />
-              {item.condition && (
-                <Badge variant="secondary">
-                  {CONDITION_LABELS[item.condition] ?? item.condition}
-                </Badge>
-              )}
-              {item.quantity > 1 && (
-                <Badge variant="secondary">×{item.quantity}</Badge>
-              )}
               {item.tags.map((tag) => (
                 <Link key={tag.id} to={`/app/collections?tag=${tag.id}`}>
                   <Badge
@@ -228,47 +218,29 @@ export function ItemDetailPage() {
               <p className="mt-4 text-sm leading-relaxed">{item.description}</p>
             )}
 
-            {(item.purchase_price !== null ||
-              item.current_value !== null ||
-              item.purchase_date ||
-              item.location) && (
-              <Card className="mt-6">
-                <CardContent className="grid grid-cols-2 gap-4 text-sm">
-                  {item.purchase_price !== null && (
-                    <div>
-                      <p className="text-muted-foreground">Paid</p>
-                      <p className="font-display text-lg font-semibold">
-                        {formatMoney(item.purchase_price, item.currency)}
-                      </p>
-                    </div>
-                  )}
-                  {item.current_value !== null && (
-                    <div>
-                      <p className="text-muted-foreground">Worth now</p>
-                      <p className="font-display text-lg font-semibold text-primary">
-                        {formatMoney(item.current_value, item.currency)}
-                      </p>
-                    </div>
-                  )}
-                  {item.purchase_date && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="size-4" />
-                      {new Date(item.purchase_date).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </div>
-                  )}
-                  {item.location && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="size-4" />
-                      {item.location}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+            {categoryShowsMoney(item.category.slug) &&
+              (item.purchase_price !== null || item.current_value !== null) && (
+                <Card className="mt-6">
+                  <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                    {item.purchase_price !== null && (
+                      <div>
+                        <p className="text-muted-foreground">Paid</p>
+                        <p className="font-display text-lg font-semibold">
+                          {formatMoney(item.purchase_price, item.currency)}
+                        </p>
+                      </div>
+                    )}
+                    {item.current_value !== null && (
+                      <div>
+                        <p className="text-muted-foreground">Worth now</p>
+                        <p className="font-display text-lg font-semibold text-primary">
+                          {formatMoney(item.current_value, item.currency)}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
             {customEntries.length > 0 && (
               <Card className="mt-4">

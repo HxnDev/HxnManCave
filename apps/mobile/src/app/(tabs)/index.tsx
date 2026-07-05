@@ -26,7 +26,7 @@ import {
 } from "@/lib/api";
 import { colors, font, radius, STATUS_LABELS, tint, toRnColor } from "@/lib/theme";
 
-const STATUS_FILTERS = ["owned", "wishlist", "sold", "gifted"];
+const STATUS_FILTERS = ["owned", "wishlist"];
 
 function greeting(): string {
   const hour = new Date().getHours();

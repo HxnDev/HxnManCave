@@ -1,3 +1,4 @@
+import { categoryShowsMoney } from "@mancave/shared";
 import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Pencil, Trash2 } from "lucide-react-native";
@@ -14,7 +15,7 @@ import {
 import { CategoryIcon } from "@/components/category-icon";
 import { Card, SectionTitle, StatusPill } from "@/components/ui";
 import { useDeleteItem, useItemImages, useItems } from "@/lib/api";
-import { colors, CONDITION_LABELS, font, radius } from "@/lib/theme";
+import { colors, font, radius } from "@/lib/theme";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -122,26 +123,23 @@ export default function ItemDetailScreen() {
             </Text>
           </View>
 
-          <Card style={{ gap: 12 }}>
-            <Row label="Quantity" value={String(item.quantity)} />
-            {item.condition && (
-              <Row label="Condition" value={CONDITION_LABELS[item.condition] ?? item.condition} />
+          {categoryShowsMoney(item.category.slug) &&
+            (item.purchase_price !== null || item.current_value !== null) && (
+              <Card style={{ gap: 12 }}>
+                {item.purchase_price !== null && (
+                  <Row
+                    label="Purchase price"
+                    value={`${item.purchase_price.toLocaleString()} ${item.currency}`}
+                  />
+                )}
+                {item.current_value !== null && (
+                  <Row
+                    label="Current value"
+                    value={`${item.current_value.toLocaleString()} ${item.currency}`}
+                  />
+                )}
+              </Card>
             )}
-            {item.purchase_price !== null && (
-              <Row
-                label="Purchase price"
-                value={`${item.purchase_price.toLocaleString()} ${item.currency}`}
-              />
-            )}
-            {item.current_value !== null && (
-              <Row
-                label="Current value"
-                value={`${item.current_value.toLocaleString()} ${item.currency}`}
-              />
-            )}
-            {item.purchase_date && <Row label="Purchased" value={item.purchase_date} />}
-            {item.location && <Row label="Location" value={item.location} />}
-          </Card>
 
           {customFields.length > 0 && (
             <Card style={{ gap: 12 }}>

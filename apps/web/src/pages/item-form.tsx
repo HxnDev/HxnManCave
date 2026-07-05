@@ -1,4 +1,4 @@
-import type { FieldDefinition } from "@mancave/shared";
+import { categoryShowsMoney, type FieldDefinition } from "@mancave/shared";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -37,9 +37,12 @@ import {
   useUpdateItem,
   type ItemInput,
 } from "@/hooks/use-items";
-import { CONDITION_LABELS, STATUS_LABELS } from "@/components/status-badge";
+import { STATUS_LABELS } from "@/components/status-badge";
 
 const CURRENCIES = ["CHF", "EUR", "USD", "GBP", "PKR", "JPY"];
+
+/** Status choices offered in the form (legacy sold/gifted stay valid on old items). */
+const STATUS_OPTIONS = ["owned", "wishlist"] as const;
 
 const formSchema = z.object({
   category_id: z.string().min(1, "Pick a category"),
@@ -153,6 +156,7 @@ export function ItemFormPage() {
   const selectedCategoryId = form.watch("category_id");
   const selectedCategory = categories?.find((c) => c.id === selectedCategoryId);
   const template = (selectedCategory?.field_template ?? []) as FieldDefinition[];
+  const showMoney = categoryShowsMoney(selectedCategory?.slug);
 
   const effectiveCustomFields =
     customFields ?? (isEdit ? (existingItem?.custom_fields ?? {}) : {});
@@ -353,107 +357,61 @@ export function ItemFormPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                    {STATUS_OPTIONS.map((value) => (
                       <SelectItem key={value} value={value}>
-                        {label}
+                        {STATUS_LABELS[value]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Condition</Label>
-                <Select
-                  value={form.watch("condition")}
-                  onValueChange={(value) => form.setValue("condition", value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CONDITION_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {showMoney && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="purchase_price">Purchase price</Label>
+                    <Input
+                      id="purchase_price"
+                      type="number"
+                      step="any"
+                      min={0}
+                      placeholder="0.00"
+                      {...form.register("purchase_price")}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min={0}
-                  {...form.register("quantity")}
-                />
-                {errors.quantity && (
-                  <p className="text-xs text-destructive">{errors.quantity.message}</p>
-                )}
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="current_value">Current value</Label>
+                    <Input
+                      id="current_value"
+                      type="number"
+                      step="any"
+                      min={0}
+                      placeholder="0.00"
+                      {...form.register("current_value")}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="purchase_price">Purchase price</Label>
-                <Input
-                  id="purchase_price"
-                  type="number"
-                  step="any"
-                  min={0}
-                  placeholder="0.00"
-                  {...form.register("purchase_price")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="current_value">Current value</Label>
-                <Input
-                  id="current_value"
-                  type="number"
-                  step="any"
-                  min={0}
-                  placeholder="0.00"
-                  {...form.register("current_value")}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Currency</Label>
-                <Select
-                  value={form.watch("currency")}
-                  onValueChange={(value) => form.setValue("currency", value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map((currency) => (
-                      <SelectItem key={currency} value={currency}>
-                        {currency}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="purchase_date">Purchase date</Label>
-                <Input
-                  id="purchase_date"
-                  type="date"
-                  {...form.register("purchase_date")}
-                />
-              </div>
-
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  placeholder="Living room shelf, storage box B…"
-                  {...form.register("location")}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label>Currency</Label>
+                    <Select
+                      value={form.watch("currency")}
+                      onValueChange={(value) => form.setValue("currency", value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CURRENCIES.map((currency) => (
+                          <SelectItem key={currency} value={currency}>
+                            {currency}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
 
               <div className="space-y-2 sm:col-span-2 lg:col-span-3">
                 <Label htmlFor="notes">Notes</Label>
