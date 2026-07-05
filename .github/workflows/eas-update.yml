@@ -40,6 +40,9 @@ jobs:
         # Same publishable values already committed in eas.json — they are
         # baked into the JS bundle at publish time.
         env:
+          CI: "1"
           EXPO_PUBLIC_SUPABASE_URL: https://tsbouqdhocewfdhacdna.supabase.co
           EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_t7sE_UJmnY8-jVEkdXCeXg_UYdMx0TZ
-        run: eas update --channel preview --auto --non-interactive
+        # Android only: exporting for web statically renders the app in Node,
+        # where the Supabase client crashes on the missing `window` global.
+        run: eas update --channel preview --platform android --auto --non-interactive
