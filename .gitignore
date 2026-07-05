@@ -24,6 +24,7 @@ supabase/.temp
 # editor / os
 .DS_Store
 *.local
+.idea/
 
 # logs
 *.log
