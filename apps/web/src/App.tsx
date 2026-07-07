@@ -23,6 +23,9 @@ const ItemDetailPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import("@/pages/settings").then((m) => ({ default: m.SettingsPage })),
 );
+const PrivacyPage = lazy(() =>
+  import("@/pages/privacy").then((m) => ({ default: m.PrivacyPage })),
+);
 
 export default function App() {
   return (
@@ -32,6 +35,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<AuthPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="collections" element={<CollectionsPage />} />
