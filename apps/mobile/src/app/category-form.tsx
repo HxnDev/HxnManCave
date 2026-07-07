@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,10 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+/** Approximate native-stack header height (dp), added to the top inset. */
+const HEADER_HEIGHT = 56;
 import { CATEGORY_ICONS, CategoryIcon } from "@/components/category-icon";
 import {
   useCategories,
@@ -98,7 +103,14 @@ export default function CategoryFormScreen() {
     ]);
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior="padding"
+      keyboardVerticalOffset={insets.top + HEADER_HEIGHT}
+    >
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -185,6 +197,7 @@ export default function CategoryFormScreen() {
         </Pressable>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +20,10 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+/** Approximate native-stack header height (dp), added to the top inset. */
+const HEADER_HEIGHT = 56;
 import type { ItemInput, MobileItem } from "@/lib/api";
 import {
   colors,
@@ -74,6 +79,7 @@ export function ItemForm({
   );
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
   const [removedIds, setRemovedIds] = useState<string[]>([]);
+  const insets = useSafeAreaInsets();
 
   const category = useMemo(
     () => categories.find((c) => c.id === categoryId),
@@ -151,6 +157,11 @@ export function ItemForm({
   );
 
   return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior="padding"
+      keyboardVerticalOffset={insets.top + HEADER_HEIGHT}
+    >
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -312,6 +323,7 @@ export function ItemForm({
         )}
       </Pressable>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
