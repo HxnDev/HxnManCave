@@ -19,7 +19,8 @@ function GridCard({ item }: { item: MobileItem }) {
     >
       {item.cover_url ? (
         <Image
-          source={{ uri: item.cover_url }}
+          source={{ uri: item.cover_url, cacheKey: item.images[0]?.storage_path }}
+          recyclingKey={item.id}
           style={styles.image}
           contentFit="cover"
           transition={180}

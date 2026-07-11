@@ -36,6 +36,15 @@ export async function uploadItemImage(
   return path;
 }
 
+/** Sign for 7 days; refresh via the memo an hour before expiry. */
+const SIGN_TTL_SECONDS = 60 * 60 * 24 * 7;
+
+/**
+ * path -> signed URL memo. Stable URLs across refetches let the browser HTTP
+ * cache do its job — a fresh token per fetch would re-download every image.
+ */
+const signedUrlMemo = new Map<string, { url: string; expiresAt: number }>();
+
 /** Batch-sign storage paths for display. Returns path -> signed URL. */
 export async function getSignedUrls(
   paths: string[],
@@ -43,13 +52,28 @@ export async function getSignedUrls(
   const map = new Map<string, string>();
   if (paths.length === 0) return map;
 
+  const now = Date.now();
+  const missing: string[] = [];
+  for (const path of paths) {
+    const hit = signedUrlMemo.get(path);
+    if (hit && hit.expiresAt > now) map.set(path, hit.url);
+    else missing.push(path);
+  }
+  if (missing.length === 0) return map;
+
   const { data, error } = await supabase.storage
     .from(BUCKET)
-    .createSignedUrls(paths, 3600);
+    .createSignedUrls(missing, SIGN_TTL_SECONDS);
   if (error) throw error;
 
   for (const entry of data ?? []) {
-    if (entry.signedUrl && entry.path) map.set(entry.path, entry.signedUrl);
+    if (entry.signedUrl && entry.path) {
+      signedUrlMemo.set(entry.path, {
+        url: entry.signedUrl,
+        expiresAt: now + (SIGN_TTL_SECONDS - 3600) * 1000,
+      });
+      map.set(entry.path, entry.signedUrl);
+    }
   }
   return map;
 }

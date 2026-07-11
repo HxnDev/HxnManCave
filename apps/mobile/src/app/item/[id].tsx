@@ -104,7 +104,7 @@ export default function ItemDetailScreen() {
             {images.map((image) => (
               <Image
                 key={image.id}
-                source={{ uri: image.url }}
+                source={{ uri: image.url, cacheKey: image.path }}
                 style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.85 }}
                 contentFit="cover"
               />

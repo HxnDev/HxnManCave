@@ -44,7 +44,12 @@ function RecentItem({ item }: { item: MobileItem }) {
       onPress={() => router.push({ pathname: "/item/[id]", params: { id: item.id } })}
     >
       {item.cover_url ? (
-        <Image source={{ uri: item.cover_url }} style={styles.recentImage} contentFit="cover" />
+        <Image
+          source={{ uri: item.cover_url, cacheKey: item.images[0]?.storage_path }}
+          recyclingKey={item.id}
+          style={styles.recentImage}
+          contentFit="cover"
+        />
       ) : (
         <View style={[styles.recentImage, styles.recentPlaceholder]}>
           <CategoryIcon icon={item.category.icon} color={item.category.color} size={26} iconSize={15} />

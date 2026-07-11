@@ -27,15 +27,40 @@ function sortImages(images: ItemImage[]): ItemImage[] {
   );
 }
 
+/** Sign for 7 days; refresh via the memo an hour before expiry. */
+const SIGN_TTL_SECONDS = 60 * 60 * 24 * 7;
+
+/**
+ * path -> signed URL memo. Keeping URLs stable across refetches is what makes
+ * the image cache work — a fresh token per fetch would look like a new image.
+ */
+const signedUrlMemo = new Map<string, { url: string; expiresAt: number }>();
+
 async function getSignedUrls(paths: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   if (paths.length === 0) return map;
+
+  const now = Date.now();
+  const missing: string[] = [];
+  for (const path of paths) {
+    const hit = signedUrlMemo.get(path);
+    if (hit && hit.expiresAt > now) map.set(path, hit.url);
+    else missing.push(path);
+  }
+  if (missing.length === 0) return map;
+
   const { data, error } = await supabase.storage
     .from(BUCKET)
-    .createSignedUrls(paths, 3600);
+    .createSignedUrls(missing, SIGN_TTL_SECONDS);
   if (error) throw error;
   for (const entry of data ?? []) {
-    if (entry.signedUrl && entry.path) map.set(entry.path, entry.signedUrl);
+    if (entry.signedUrl && entry.path) {
+      signedUrlMemo.set(entry.path, {
+        url: entry.signedUrl,
+        expiresAt: now + (SIGN_TTL_SECONDS - 3600) * 1000,
+      });
+      map.set(entry.path, entry.signedUrl);
+    }
   }
   return map;
 }
@@ -253,12 +278,16 @@ export function useItemImages(item: MobileItem | undefined) {
   return useQuery({
     queryKey: ["item-images", item?.id, item?.images.length],
     enabled: Boolean(item && item.images.length > 0),
-    queryFn: async (): Promise<{ id: string; url: string }[]> => {
+    queryFn: async (): Promise<{ id: string; url: string; path: string }[]> => {
       const urlMap = await getSignedUrls(
         item!.images.map((img) => img.storage_path),
       );
       return item!.images
-        .map((img) => ({ id: img.id, url: urlMap.get(img.storage_path) ?? "" }))
+        .map((img) => ({
+          id: img.id,
+          url: urlMap.get(img.storage_path) ?? "",
+          path: img.storage_path,
+        }))
         .filter((entry) => entry.url !== "");
     },
   });
