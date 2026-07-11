@@ -1,7 +1,5 @@
 import type { Category, Item, ItemImage, Profile } from "@mancave/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { decode } from "base64-arraybuffer";
-import * as FileSystem from "expo-file-system/legacy";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { supabase } from "./supabase";
 
@@ -200,14 +198,18 @@ export function useUploadAvatar() {
         [{ resize: { width: 512 } }],
         { compress: 0.8, format: SaveFormat.JPEG },
       );
-      const base64 = await FileSystem.readAsStringAsync(manipulated.uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+
+      const formData = new FormData();
+      formData.append("file", {
+        uri: manipulated.uri,
+        name: "avatar.jpg",
+        type: "image/jpeg",
+      } as unknown as Blob);
 
       const path = `${userData.user.id}/avatar/${Date.now()}.jpg`;
       const { error } = await supabase.storage
         .from(BUCKET)
-        .upload(path, decode(base64), { contentType: "image/jpeg" });
+        .upload(path, formData, { contentType: "image/jpeg" });
       if (error) throw error;
 
       const { error: profileError } = await supabase
@@ -303,18 +305,23 @@ async function uploadPhoto(
 ): Promise<void> {
   const manipulated = await manipulateAsync(
     uri,
-    [{ resize: { width: 1600 } }],
+    [{ resize: { width: 1280 } }],
     { compress: 0.7, format: SaveFormat.JPEG },
   );
 
-  const base64 = await FileSystem.readAsStringAsync(manipulated.uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
+  // Multipart upload streams the file natively — no base64 round-trip on the
+  // JS thread (which used to freeze the UI while saving).
+  const formData = new FormData();
+  formData.append("file", {
+    uri: manipulated.uri,
+    name: "photo.jpg",
+    type: "image/jpeg",
+  } as unknown as Blob);
 
   const path = `${userId}/${itemId}/${Date.now()}-${sortOrder}.jpg`;
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(path, decode(base64), { contentType: "image/jpeg" });
+    .upload(path, formData, { contentType: "image/jpeg" });
   if (error) throw error;
 
   const { error: rowError } = await supabase.from("item_images").insert({
@@ -365,9 +372,11 @@ export function useCreateItem() {
       if (error) throw error;
 
       const itemId = (data as { id: string }).id;
-      for (let i = 0; i < photoUris.length; i++) {
-        await uploadPhoto(userData.user.id, itemId, photoUris[i], i, i === 0);
-      }
+      await Promise.all(
+        photoUris.map((uri, i) =>
+          uploadPhoto(userData.user.id, itemId, uri, i, i === 0),
+        ),
+      );
       return itemId;
     },
     onSuccess: () => {
@@ -417,16 +426,17 @@ export function useUpdateItem() {
         (img) => !removedImageIds.includes(img.id),
       );
       const hasMain = remaining.some((img) => img.is_main);
-      let nextSort = remaining.length;
-      for (let i = 0; i < newPhotoUris.length; i++) {
-        await uploadPhoto(
-          userData.user.id,
-          item.id,
-          newPhotoUris[i],
-          nextSort++,
-          !hasMain && i === 0,
-        );
-      }
+      await Promise.all(
+        newPhotoUris.map((uri, i) =>
+          uploadPhoto(
+            userData.user.id,
+            item.id,
+            uri,
+            remaining.length + i,
+            !hasMain && i === 0,
+          ),
+        ),
+      );
 
       if (!hasMain && newPhotoUris.length === 0 && remaining.length > 0) {
         await supabase

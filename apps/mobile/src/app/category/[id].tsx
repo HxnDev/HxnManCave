@@ -23,7 +23,6 @@ function GridCard({ item }: { item: MobileItem }) {
           recyclingKey={item.id}
           style={styles.image}
           contentFit="cover"
-          transition={180}
         />
       ) : (
         <View style={[styles.image, styles.placeholder]}>

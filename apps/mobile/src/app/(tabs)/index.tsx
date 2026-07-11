@@ -51,7 +51,6 @@ function ShelfCard({ item }: { item: MobileItem }) {
           recyclingKey={item.id}
           style={styles.itemImage}
           contentFit="cover"
-          transition={180}
         />
       ) : (
         <View style={[styles.itemImage, styles.itemPlaceholder]}>
