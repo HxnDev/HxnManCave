@@ -1,4 +1,9 @@
-import { categoryShowsMoney, type FieldDefinition } from "@mancave/shared";
+import {
+  categoryShowsBrand,
+  categoryShowsMoney,
+  categoryShowsSeries,
+  type FieldDefinition,
+} from "@mancave/shared";
 import {
   ArrowLeft,
   ImageOff,
@@ -207,11 +212,15 @@ export function ItemDetailPage() {
               ))}
             </div>
 
-            {(item.brand || item.series) && (
-              <p className="mt-3 text-muted-foreground">
-                {[item.brand, item.series].filter(Boolean).join(" · ")}
-              </p>
-            )}
+            {(() => {
+              const parts = [
+                categoryShowsBrand(item.category.slug) ? item.brand : null,
+                categoryShowsSeries(item.category.slug) ? item.series : null,
+              ].filter(Boolean);
+              return parts.length > 0 ? (
+                <p className="mt-3 text-muted-foreground">{parts.join(" · ")}</p>
+              ) : null;
+            })()}
 
             {item.description && (
               <p className="mt-4 text-sm leading-relaxed">{item.description}</p>

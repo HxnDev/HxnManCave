@@ -1,4 +1,8 @@
-import { categoryShowsMoney } from "@mancave/shared";
+import {
+  categoryShowsBrand,
+  categoryShowsMoney,
+  categoryShowsSeries,
+} from "@mancave/shared";
 import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Pencil, Trash2 } from "lucide-react-native";
@@ -119,7 +123,13 @@ export default function ItemDetailScreen() {
               <StatusPill status={item.status} />
             </View>
             <Text style={styles.subtitle}>
-              {[item.category.name, item.brand, item.series].filter(Boolean).join(" · ")}
+              {[
+                item.category.name,
+                categoryShowsBrand(item.category.slug) ? item.brand : null,
+                categoryShowsSeries(item.category.slug) ? item.series : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </Text>
           </View>
 

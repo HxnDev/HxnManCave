@@ -188,26 +188,23 @@ begin
   insert into public.categories (user_id, name, slug, icon, color, field_template, sort_order)
   values
     (new.id, 'LEGO Sets', 'lego', 'blocks', 'oklch(0.63 0.22 25)',
-      '[{"key":"set_number","label":"Set Number","type":"text"},{"key":"pieces","label":"Pieces","type":"number"},{"key":"year","label":"Year","type":"number"},{"key":"theme","label":"Theme","type":"text"},{"key":"minifigures","label":"Minifigures","type":"number"},{"key":"built","label":"Built","type":"boolean"}]'::jsonb, 0),
+      '[{"key":"set_number","label":"Set Number","type":"text"},{"key":"pieces","label":"Pieces","type":"number"},{"key":"year","label":"Year","type":"number"},{"key":"built","label":"Built","type":"boolean"}]'::jsonb, 0),
     (new.id, 'Funko Pops', 'funko', 'person-standing', 'oklch(0.65 0.17 300)',
-      '[{"key":"pop_number","label":"Pop Number","type":"text"},{"key":"franchise","label":"Franchise","type":"text"},{"key":"exclusive","label":"Exclusive","type":"text"},{"key":"boxed","label":"In Box","type":"boolean"}]'::jsonb, 1),
+      '[{"key":"pop_number","label":"Pop Number","type":"text"},{"key":"franchise","label":"Franchise","type":"text"}]'::jsonb, 1),
     (new.id, 'Books', 'books', 'book-open', 'oklch(0.7 0.12 195)',
-      '[{"key":"author","label":"Author","type":"text"},{"key":"publisher","label":"Publisher","type":"text"},{"key":"isbn","label":"ISBN","type":"text"},{"key":"pages","label":"Pages","type":"number"},{"key":"language","label":"Language","type":"text"},{"key":"read","label":"Read","type":"boolean"}]'::jsonb, 2),
-    (new.id, 'Table Decor', 'table-decor', 'lamp-desk', 'oklch(0.72 0.13 140)',
-      '[{"key":"material","label":"Material","type":"text"},{"key":"origin","label":"Origin","type":"text"}]'::jsonb, 3),
+      '[{"key":"author","label":"Author","type":"text"},{"key":"publisher","label":"Publisher","type":"text"},{"key":"isbn","label":"ISBN","type":"text"}]'::jsonb, 2),
     (new.id, 'Souvenirs', 'souvenirs', 'gift', 'oklch(0.68 0.15 45)',
-      '[{"key":"country","label":"Country","type":"text"},{"key":"city","label":"City","type":"text"},{"key":"trip_year","label":"Trip Year","type":"number"}]'::jsonb, 4),
+      '[{"key":"country","label":"Country","type":"text"},{"key":"trip_year","label":"Trip Year","type":"number"},{"key":"city","label":"City","type":"text"}]'::jsonb, 3),
     (new.id, 'Keychains', 'keychains', 'key-round', 'oklch(0.78 0.14 75)',
-      '[{"key":"country","label":"Country","type":"text"},{"key":"city","label":"City","type":"text"}]'::jsonb, 5),
+      '[{"key":"country","label":"Country","type":"text"},{"key":"trip_year","label":"Trip Year","type":"number"},{"key":"city","label":"City","type":"text"}]'::jsonb, 4),
     (new.id, 'Perfumes', 'perfumes', 'spray-can', 'oklch(0.62 0.19 350)',
-      '[{"key":"size_ml","label":"Size","type":"number","unit":"ml"},{"key":"remaining_pct","label":"Remaining","type":"number","unit":"%"},{"key":"concentration","label":"Concentration","type":"select","options":["EDT","EDP","Parfum","Extrait","Cologne"]},{"key":"season","label":"Season","type":"select","options":["Summer","Winter","All-year"]}]'::jsonb, 6),
+      '[{"key":"size_ml","label":"Size","type":"number","unit":"ml"},{"key":"concentration","label":"Concentration","type":"select","options":["EDT","EDP","Parfum","Extrait","Cologne"]}]'::jsonb, 5),
     (new.id, 'Card Games', 'card-games', 'spade', 'oklch(0.63 0.2 15)',
-      '[{"key":"players","label":"Players","type":"text"},{"key":"complete","label":"Complete","type":"boolean"}]'::jsonb, 7),
+      '[]'::jsonb, 6),
     (new.id, 'Online Games', 'online-games', 'gamepad-2', 'oklch(0.66 0.16 260)',
-      '[{"key":"platform","label":"Platform","type":"select","options":["Steam","Epic","PlayStation","Xbox","Nintendo","GOG","Other"]},{"key":"format","label":"Format","type":"select","options":["Digital","Physical"]},{"key":"completed","label":"Completed","type":"boolean"}]'::jsonb, 8),
+      '[{"key":"platform","label":"Platform","type":"select","options":["Steam","Epic","PlayStation","Xbox","Nintendo","GOG","Other"]},{"key":"format","label":"Format","type":"select","options":["Digital","Physical"]}]'::jsonb, 7),
     (new.id, 'Electronics', 'electronics', 'cpu', 'oklch(0.7 0.11 230)',
-      '[{"key":"model","label":"Model","type":"text"},{"key":"serial_number","label":"Serial Number","type":"text"},{"key":"warranty_until","label":"Warranty Until","type":"date"}]'::jsonb, 9),
-    (new.id, 'Other', 'other', 'package', 'oklch(0.64 0.015 80)', '[]'::jsonb, 10);
+      '[{"key":"model","label":"Model","type":"text"},{"key":"serial_number","label":"Serial Number","type":"text"},{"key":"warranty_until","label":"Warranty Until","type":"date"}]'::jsonb, 8);
 
   return new;
 end;

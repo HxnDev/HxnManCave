@@ -1,5 +1,8 @@
 import {
+  categoryBrandLabel,
+  categoryShowsBrand,
   categoryShowsMoney,
+  categoryShowsSeries,
   withBooleanDefaults,
   type Category,
   type FieldDefinition,
@@ -85,6 +88,9 @@ export function ItemForm({
     () => categories.find((c) => c.id === categoryId),
     [categories, categoryId],
   );
+  const showBrand = categoryShowsBrand(category?.slug);
+  const showSeries = categoryShowsSeries(category?.slug);
+  const brandLabel = categoryBrandLabel(category?.slug);
 
   const takePhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -130,8 +136,11 @@ export function ItemForm({
       {
         category_id: categoryId,
         name: name.trim(),
-        brand: brand.trim() || (category?.slug === "lego" ? "LEGO" : null),
-        series: series.trim() || null,
+        // Hidden fields are cleared so stale values don't survive a shelf change.
+        brand: showBrand
+          ? brand.trim() || (category?.slug === "lego" ? "LEGO" : null)
+          : null,
+        series: showSeries ? series.trim() || null : null,
         status,
         // Fields no longer editable in the form; keep existing values on edit.
         condition: item?.condition ?? null,
@@ -214,26 +223,32 @@ export function ItemForm({
           onChangeText={setName}
         />
       </Field>
-      <View style={styles.rowSplit}>
-        <Field label="Brand" style={{ flex: 1 }}>
-          <TextInput
-            style={styles.input}
-            placeholder="LEGO"
-            placeholderTextColor={colors.muted}
-            value={brand}
-            onChangeText={setBrand}
-          />
-        </Field>
-        <Field label="Series" style={{ flex: 1 }}>
-          <TextInput
-            style={styles.input}
-            placeholder="Technic"
-            placeholderTextColor={colors.muted}
-            value={series}
-            onChangeText={setSeries}
-          />
-        </Field>
-      </View>
+      {(showBrand || showSeries) && (
+        <View style={styles.rowSplit}>
+          {showBrand && (
+            <Field label={brandLabel} style={{ flex: 1 }}>
+              <TextInput
+                style={styles.input}
+                placeholder={brandLabel === "Studio" ? "Rockstar Games" : "LEGO"}
+                placeholderTextColor={colors.muted}
+                value={brand}
+                onChangeText={setBrand}
+              />
+            </Field>
+          )}
+          {showSeries && (
+            <Field label="Series" style={{ flex: 1 }}>
+              <TextInput
+                style={styles.input}
+                placeholder="Technic"
+                placeholderTextColor={colors.muted}
+                value={series}
+                onChangeText={setSeries}
+              />
+            </Field>
+          )}
+        </View>
+      )}
 
       {/* Category */}
       <Text style={styles.label}>Shelf *</Text>

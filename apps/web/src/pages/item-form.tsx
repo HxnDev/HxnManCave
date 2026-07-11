@@ -1,5 +1,8 @@
 import {
+  categoryBrandLabel,
+  categoryShowsBrand,
   categoryShowsMoney,
+  categoryShowsSeries,
   withBooleanDefaults,
   type FieldDefinition,
 } from "@mancave/shared";
@@ -161,6 +164,9 @@ export function ItemFormPage() {
   const selectedCategory = categories?.find((c) => c.id === selectedCategoryId);
   const template = (selectedCategory?.field_template ?? []) as FieldDefinition[];
   const showMoney = categoryShowsMoney(selectedCategory?.slug);
+  const showBrand = categoryShowsBrand(selectedCategory?.slug);
+  const showSeries = categoryShowsSeries(selectedCategory?.slug);
+  const brandLabel = categoryBrandLabel(selectedCategory?.slug);
 
   const effectiveCustomFields =
     customFields ?? (isEdit ? (existingItem?.custom_fields ?? {}) : {});
@@ -175,10 +181,13 @@ export function ItemFormPage() {
   const saving = createItem.isPending || updateItem.isPending;
 
   const onSubmit = async (values: FormValues) => {
-    const brand =
-      values.brand.trim() || (selectedCategory?.slug === "lego" ? "LEGO" : "");
+    // Hidden fields are cleared so stale values don't survive a shelf change.
+    const brand = showBrand
+      ? values.brand.trim() || (selectedCategory?.slug === "lego" ? "LEGO" : "")
+      : "";
+    const series = showSeries ? values.series : "";
     const input = toItemInput(
-      { ...values, brand },
+      { ...values, brand, series },
       withBooleanDefaults(template, effectiveCustomFields),
     );
     try {
@@ -307,19 +316,27 @@ export function ItemFormPage() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="brand">Brand</Label>
-                <Input id="brand" placeholder="LEGO" {...form.register("brand")} />
-              </div>
+              {showBrand && (
+                <div className="space-y-2">
+                  <Label htmlFor="brand">{brandLabel}</Label>
+                  <Input
+                    id="brand"
+                    placeholder={brandLabel === "Studio" ? "Rockstar Games" : "LEGO"}
+                    {...form.register("brand")}
+                  />
+                </div>
+              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="series">Series</Label>
-                <Input
-                  id="series"
-                  placeholder="Speed Champions"
-                  {...form.register("series")}
-                />
-              </div>
+              {showSeries && (
+                <div className="space-y-2">
+                  <Label htmlFor="series">Series</Label>
+                  <Input
+                    id="series"
+                    placeholder="Speed Champions"
+                    {...form.register("series")}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="description">Description</Label>

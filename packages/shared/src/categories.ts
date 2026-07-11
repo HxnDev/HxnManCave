@@ -46,7 +46,6 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
       { key: "author", label: "Author", type: "text" },
       { key: "publisher", label: "Publisher", type: "text" },
       { key: "isbn", label: "ISBN", type: "text" },
-      { key: "pages", label: "Pages", type: "number" },
     ],
   },
   {
@@ -56,8 +55,8 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     color: "oklch(0.68 0.15 45)",
     field_template: [
       { key: "country", label: "Country", type: "text" },
-      { key: "city", label: "City", type: "text" },
       { key: "trip_year", label: "Trip Year", type: "number" },
+      { key: "city", label: "City", type: "text" },
     ],
   },
   {
@@ -67,6 +66,7 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     color: "oklch(0.78 0.14 75)",
     field_template: [
       { key: "country", label: "Country", type: "text" },
+      { key: "trip_year", label: "Trip Year", type: "number" },
       { key: "city", label: "City", type: "text" },
     ],
   },
@@ -143,6 +143,48 @@ export const MONEY_HIDDEN_CATEGORY_SLUGS: string[] = [
 /** Whether items in the given category show the paid / value fields. */
 export function categoryShowsMoney(slug: string | null | undefined): boolean {
   return !slug || !MONEY_HIDDEN_CATEGORY_SLUGS.includes(slug);
+}
+
+/**
+ * Category slugs where the Brand base field is hidden in item forms and
+ * detail views (it makes no sense for these collections).
+ */
+export const BRAND_HIDDEN_CATEGORY_SLUGS: string[] = [
+  "funko",
+  "books",
+  "souvenirs",
+  "keychains",
+  "card-games",
+];
+
+/**
+ * Category slugs where the Series base field is hidden. Custom categories
+ * (any slug not listed here) still show it.
+ */
+export const SERIES_HIDDEN_CATEGORY_SLUGS: string[] = [
+  "funko",
+  "books",
+  "souvenirs",
+  "keychains",
+  "perfumes",
+  "card-games",
+  "online-games",
+  "electronics",
+];
+
+/** Whether items in the given category show the Brand field. */
+export function categoryShowsBrand(slug: string | null | undefined): boolean {
+  return !slug || !BRAND_HIDDEN_CATEGORY_SLUGS.includes(slug);
+}
+
+/** Whether items in the given category show the Series field. */
+export function categoryShowsSeries(slug: string | null | undefined): boolean {
+  return !slug || !SERIES_HIDDEN_CATEGORY_SLUGS.includes(slug);
+}
+
+/** Label for the Brand field ("Studio" for games, "Brand" everywhere else). */
+export function categoryBrandLabel(slug: string | null | undefined): string {
+  return slug === "online-games" ? "Studio" : "Brand";
 }
 
 /**
