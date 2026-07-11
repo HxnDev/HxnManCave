@@ -188,7 +188,7 @@ begin
   insert into public.categories (user_id, name, slug, icon, color, field_template, sort_order)
   values
     (new.id, 'LEGO Sets', 'lego', 'blocks', 'oklch(0.63 0.22 25)',
-      '[{"key":"set_number","label":"Set Number","type":"text"},{"key":"pieces","label":"Pieces","type":"number"},{"key":"year","label":"Year","type":"number"},{"key":"built","label":"Built","type":"boolean"}]'::jsonb, 0),
+      '[{"key":"set_number","label":"Set Number","type":"text"},{"key":"pieces","label":"Pieces","type":"number"},{"key":"year","label":"Year","type":"number"}]'::jsonb, 0),
     (new.id, 'Funko Pops', 'funko', 'person-standing', 'oklch(0.65 0.17 300)',
       '[{"key":"pop_number","label":"Pop Number","type":"text"},{"key":"franchise","label":"Franchise","type":"text"}]'::jsonb, 1),
     (new.id, 'Books', 'books', 'book-open', 'oklch(0.7 0.12 195)',

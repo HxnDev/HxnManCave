@@ -2,7 +2,10 @@ import {
   categoryBrandLabel,
   categoryShowsBrand,
   categoryShowsMoney,
+  categoryShowsName,
   categoryShowsSeries,
+  categoryShowsStatus,
+  deriveItemName,
   withBooleanDefaults,
   type Category,
   type FieldDefinition,
@@ -90,6 +93,8 @@ export function ItemForm({
   );
   const showBrand = categoryShowsBrand(category?.slug);
   const showSeries = categoryShowsSeries(category?.slug);
+  const showName = categoryShowsName(category?.slug);
+  const showStatus = categoryShowsStatus(category?.slug);
   const brandLabel = categoryBrandLabel(category?.slug);
 
   const takePhoto = async () => {
@@ -123,19 +128,26 @@ export function ItemForm({
   };
 
   const submit = () => {
-    if (!name.trim()) {
+    if (!categoryId) {
+      Alert.alert("Missing shelf", "Pick a shelf for this item.");
+      return;
+    }
+    if (showName && !name.trim()) {
       Alert.alert("Missing name", "Give the item a name.");
       return;
     }
-    if (!categoryId) {
-      Alert.alert("Missing category", "Pick a shelf for this item.");
-      return;
-    }
+
+    const finalCustomFields = withBooleanDefaults(
+      category?.field_template ?? [],
+      customFields,
+    );
 
     onSubmit(
       {
         category_id: categoryId,
-        name: name.trim(),
+        name: showName
+          ? name.trim()
+          : deriveItemName(category?.slug, finalCustomFields, category?.name ?? "Item"),
         // Hidden fields are cleared so stale values don't survive a shelf change.
         brand: showBrand
           ? brand.trim() || (category?.slug === "lego" ? "LEGO" : null)
@@ -151,10 +163,7 @@ export function ItemForm({
         purchase_date: item?.purchase_date ?? null,
         location: item?.location ?? null,
         notes: item?.notes ?? null,
-        custom_fields: withBooleanDefaults(
-          category?.field_template ?? [],
-          customFields,
-        ),
+        custom_fields: finalCustomFields,
       },
       newPhotos,
       removedIds,
@@ -176,81 +185,7 @@ export function ItemForm({
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Photos */}
-      <Text style={styles.label}>Photos</Text>
-      <View style={styles.photoRow}>
-        {visibleExisting.map((img) => (
-          <View key={img.id}>
-            <Image source={{ uri: img.url }} style={styles.photoThumb} contentFit="cover" />
-            <Pressable
-              style={styles.photoRemove}
-              onPress={() => setRemovedIds((prev) => [...prev, img.id])}
-            >
-              <X size={12} color={colors.text} strokeWidth={3} />
-            </Pressable>
-          </View>
-        ))}
-        {newPhotos.map((uri, index) => (
-          <View key={uri}>
-            <Image source={{ uri }} style={styles.photoThumb} contentFit="cover" />
-            <Pressable
-              style={styles.photoRemove}
-              onPress={() =>
-                setNewPhotos((prev) => prev.filter((_, i) => i !== index))
-              }
-            >
-              <X size={12} color={colors.text} strokeWidth={3} />
-            </Pressable>
-          </View>
-        ))}
-        <Pressable style={styles.photoAdd} onPress={takePhoto}>
-          <Camera size={20} color={colors.primary} />
-          <Text style={styles.photoAddText}>Camera</Text>
-        </Pressable>
-        <Pressable style={styles.photoAdd} onPress={pickPhotos}>
-          <ImagePlus size={20} color={colors.primary} />
-          <Text style={styles.photoAddText}>Gallery</Text>
-        </Pressable>
-      </View>
-
-      {/* Basics */}
-      <Field label="Name *">
-        <TextInput
-          style={styles.input}
-          placeholder="LEGO McLaren F1..."
-          placeholderTextColor={colors.muted}
-          value={name}
-          onChangeText={setName}
-        />
-      </Field>
-      {(showBrand || showSeries) && (
-        <View style={styles.rowSplit}>
-          {showBrand && (
-            <Field label={brandLabel} style={{ flex: 1 }}>
-              <TextInput
-                style={styles.input}
-                placeholder={brandLabel === "Studio" ? "Rockstar Games" : "LEGO"}
-                placeholderTextColor={colors.muted}
-                value={brand}
-                onChangeText={setBrand}
-              />
-            </Field>
-          )}
-          {showSeries && (
-            <Field label="Series" style={{ flex: 1 }}>
-              <TextInput
-                style={styles.input}
-                placeholder="Technic"
-                placeholderTextColor={colors.muted}
-                value={series}
-                onChangeText={setSeries}
-              />
-            </Field>
-          )}
-        </View>
-      )}
-
-      {/* Category */}
+      {/* Shelf comes first; everything else appears after picking one. */}
       <Text style={styles.label}>Shelf *</Text>
       <View style={styles.chipWrap}>
         {categories.map((cat) => (
@@ -261,6 +196,7 @@ export function ItemForm({
             activeColor={toRnColor(cat.color)}
             icon={<CategoryIcon icon={cat.icon} color={cat.color} size={18} iconSize={12} />}
             onPress={() => {
+              if (cat.id !== categoryId) setCustomFields(item?.custom_fields ?? {});
               setCategoryId(cat.id);
               if (cat.slug === "lego" && !brand.trim()) setBrand("LEGO");
             }}
@@ -268,75 +204,159 @@ export function ItemForm({
         ))}
       </View>
 
-      {/* Status */}
-      <Text style={styles.label}>Status</Text>
-      <View style={styles.chipWrap}>
-        {STATUSES.map((entry) => (
-          <Chip
-            key={entry}
-            label={STATUS_LABELS[entry]}
-            active={status === entry}
-            onPress={() => setStatus(entry as typeof status)}
-          />
-        ))}
-      </View>
-
-      {/* Money (hidden for some categories) */}
-      {categoryShowsMoney(category?.slug) && (
-        <View style={styles.rowSplit}>
-          <Field label={`Paid (${item?.currency ?? "CHF"})`} style={{ flex: 1 }}>
-            <TextInput
-              style={styles.input}
-              placeholder="49.99"
-              placeholderTextColor={colors.muted}
-              value={price}
-              onChangeText={setPrice}
-              keyboardType="decimal-pad"
-            />
-          </Field>
-          <Field label={`Value (${item?.currency ?? "CHF"})`} style={{ flex: 1 }}>
-            <TextInput
-              style={styles.input}
-              placeholder="99.99"
-              placeholderTextColor={colors.muted}
-              value={value}
-              onChangeText={setValue}
-              keyboardType="decimal-pad"
-            />
-          </Field>
-        </View>
-      )}
-
-      {/* Custom fields for the selected category */}
-      {category && category.field_template.length > 0 && (
+      {category && (
         <>
-          <Text style={[styles.label, { marginTop: 4 }]}>
-            {category.name} details
-          </Text>
-          {category.field_template.map((field) => (
-            <CustomFieldInput
-              key={field.key}
-              field={field}
-              value={customFields[field.key]}
-              onChange={(newValue) =>
-                setCustomFields((prev) => ({ ...prev, [field.key]: newValue }))
-              }
-            />
-          ))}
+          {/* Photos */}
+          <Text style={styles.label}>Photos</Text>
+          <View style={styles.photoRow}>
+            {visibleExisting.map((img) => (
+              <View key={img.id}>
+                <Image source={{ uri: img.url }} style={styles.photoThumb} contentFit="cover" />
+                <Pressable
+                  style={styles.photoRemove}
+                  onPress={() => setRemovedIds((prev) => [...prev, img.id])}
+                >
+                  <X size={12} color={colors.text} strokeWidth={3} />
+                </Pressable>
+              </View>
+            ))}
+            {newPhotos.map((uri, index) => (
+              <View key={uri}>
+                <Image source={{ uri }} style={styles.photoThumb} contentFit="cover" />
+                <Pressable
+                  style={styles.photoRemove}
+                  onPress={() =>
+                    setNewPhotos((prev) => prev.filter((_, i) => i !== index))
+                  }
+                >
+                  <X size={12} color={colors.text} strokeWidth={3} />
+                </Pressable>
+              </View>
+            ))}
+            <Pressable style={styles.photoAdd} onPress={takePhoto}>
+              <Camera size={20} color={colors.primary} />
+              <Text style={styles.photoAddText}>Camera</Text>
+            </Pressable>
+            <Pressable style={styles.photoAdd} onPress={pickPhotos}>
+              <ImagePlus size={20} color={colors.primary} />
+              <Text style={styles.photoAddText}>Gallery</Text>
+            </Pressable>
+          </View>
+
+          {/* Basics */}
+          {showName && (
+            <Field label="Name *">
+              <TextInput
+                style={styles.input}
+                placeholder="LEGO McLaren F1..."
+                placeholderTextColor={colors.muted}
+                value={name}
+                onChangeText={setName}
+              />
+            </Field>
+          )}
+          {(showBrand || showSeries) && (
+            <View style={styles.rowSplit}>
+              {showBrand && (
+                <Field label={brandLabel} style={{ flex: 1 }}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={brandLabel === "Studio" ? "Rockstar Games" : "LEGO"}
+                    placeholderTextColor={colors.muted}
+                    value={brand}
+                    onChangeText={setBrand}
+                  />
+                </Field>
+              )}
+              {showSeries && (
+                <Field label="Series" style={{ flex: 1 }}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Technic"
+                    placeholderTextColor={colors.muted}
+                    value={series}
+                    onChangeText={setSeries}
+                  />
+                </Field>
+              )}
+            </View>
+          )}
+
+          {/* Status */}
+          {showStatus && (
+            <>
+              <Text style={styles.label}>Status</Text>
+              <View style={styles.chipWrap}>
+                {STATUSES.map((entry) => (
+                  <Chip
+                    key={entry}
+                    label={STATUS_LABELS[entry]}
+                    active={status === entry}
+                    onPress={() => setStatus(entry as typeof status)}
+                  />
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* Money (hidden for some categories) */}
+          {categoryShowsMoney(category?.slug) && (
+            <View style={styles.rowSplit}>
+              <Field label={`Paid (${item?.currency ?? "CHF"})`} style={{ flex: 1 }}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="49.99"
+                  placeholderTextColor={colors.muted}
+                  value={price}
+                  onChangeText={setPrice}
+                  keyboardType="decimal-pad"
+                />
+              </Field>
+              <Field label={`Value (${item?.currency ?? "CHF"})`} style={{ flex: 1 }}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="99.99"
+                  placeholderTextColor={colors.muted}
+                  value={value}
+                  onChangeText={setValue}
+                  keyboardType="decimal-pad"
+                />
+              </Field>
+            </View>
+          )}
+
+          {/* Custom fields for the selected category */}
+          {category.field_template.length > 0 && (
+            <>
+              <Text style={[styles.label, { marginTop: 4 }]}>
+                {category.name} details
+              </Text>
+              {category.field_template.map((field) => (
+                <CustomFieldInput
+                  key={field.key}
+                  field={field}
+                  value={customFields[field.key]}
+                  onChange={(newValue) =>
+                    setCustomFields((prev) => ({ ...prev, [field.key]: newValue }))
+                  }
+                />
+              ))}
+            </>
+          )}
+
+          <Pressable
+            style={[styles.saveButton, busy && { opacity: 0.6 }]}
+            onPress={submit}
+            disabled={busy}
+          >
+            {busy ? (
+              <ActivityIndicator color={colors.onPrimary} />
+            ) : (
+              <Text style={styles.saveText}>{submitLabel}</Text>
+            )}
+          </Pressable>
         </>
       )}
-
-      <Pressable
-        style={[styles.saveButton, busy && { opacity: 0.6 }]}
-        onPress={submit}
-        disabled={busy}
-      >
-        {busy ? (
-          <ActivityIndicator color={colors.onPrimary} />
-        ) : (
-          <Text style={styles.saveText}>{submitLabel}</Text>
-        )}
-      </Pressable>
     </ScrollView>
     </KeyboardAvoidingView>
   );

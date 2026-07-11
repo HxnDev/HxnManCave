@@ -24,7 +24,6 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
       { key: "set_number", label: "Set Number", type: "text" },
       { key: "pieces", label: "Pieces", type: "number" },
       { key: "year", label: "Year", type: "number" },
-      { key: "built", label: "Built", type: "boolean" },
     ],
   },
   {
@@ -185,6 +184,70 @@ export function categoryShowsSeries(slug: string | null | undefined): boolean {
 /** Label for the Brand field ("Studio" for games, "Brand" everywhere else). */
 export function categoryBrandLabel(slug: string | null | undefined): string {
   return slug === "online-games" ? "Studio" : "Brand";
+}
+
+/**
+ * Category slugs where the Name base field is hidden; the item name is
+ * derived from the custom fields instead (see deriveItemName).
+ */
+export const NAME_HIDDEN_CATEGORY_SLUGS: string[] = [
+  "funko",
+  "souvenirs",
+  "keychains",
+];
+
+/** Category slugs where the Status (owned / wishlist) picker is hidden. */
+export const STATUS_HIDDEN_CATEGORY_SLUGS: string[] = [
+  "funko",
+  "souvenirs",
+  "keychains",
+  "card-games",
+];
+
+/** Whether items in the given category show the Name field. */
+export function categoryShowsName(slug: string | null | undefined): boolean {
+  return !slug || !NAME_HIDDEN_CATEGORY_SLUGS.includes(slug);
+}
+
+/** Whether items in the given category show the Status picker. */
+export function categoryShowsStatus(slug: string | null | undefined): boolean {
+  return !slug || !STATUS_HIDDEN_CATEGORY_SLUGS.includes(slug);
+}
+
+/**
+ * Builds a display name from the custom fields for categories that hide the
+ * Name input (items.name is NOT NULL and drives lists + search).
+ */
+export function deriveItemName(
+  slug: string | null | undefined,
+  values: Record<string, unknown>,
+  fallback: string,
+): string {
+  const text = (key: string): string => {
+    const raw = values[key];
+    return typeof raw === "string" || typeof raw === "number"
+      ? String(raw).trim()
+      : "";
+  };
+
+  if (slug === "funko") {
+    const pop = text("pop_number");
+    const name = [text("franchise"), pop ? `#${pop}` : ""]
+      .filter(Boolean)
+      .join(" ");
+    return name || fallback;
+  }
+
+  if (slug === "souvenirs" || slug === "keychains") {
+    const place = [text("city"), text("country")].filter(Boolean).join(", ");
+    const year = text("trip_year");
+    if (place && year) return `${place} (${year})`;
+    if (place) return place;
+    if (year) return `${fallback} ${year}`;
+    return fallback;
+  }
+
+  return fallback;
 }
 
 /**

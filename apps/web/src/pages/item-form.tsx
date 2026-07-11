@@ -2,7 +2,10 @@ import {
   categoryBrandLabel,
   categoryShowsBrand,
   categoryShowsMoney,
+  categoryShowsName,
   categoryShowsSeries,
+  categoryShowsStatus,
+  deriveItemName,
   withBooleanDefaults,
   type FieldDefinition,
 } from "@mancave/shared";
@@ -16,7 +19,6 @@ import { z } from "zod";
 import { CategoryIcon } from "@/components/category-icon";
 import { CustomFieldsInputs } from "@/components/custom-fields-inputs";
 import { ImageUploader, type ExistingImage } from "@/components/image-uploader";
-import { TagInput } from "@/components/tag-input";
 import { PageTransition } from "@/components/motion/page-transition";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -36,8 +38,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { useCategories } from "@/hooks/use-categories";
+import { cn } from "@/lib/utils";
 import {
   useCreateItem,
   useItem,
@@ -53,7 +55,8 @@ const STATUS_OPTIONS = ["owned", "wishlist"] as const;
 
 const formSchema = z.object({
   category_id: z.string().min(1, "Pick a category"),
-  name: z.string().min(1, "Give it a name"),
+  // Required only for categories that show the Name field (checked on submit).
+  name: z.string(),
   brand: z.string(),
   series: z.string(),
   description: z.string(),
@@ -130,7 +133,6 @@ export function ItemFormPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [removedImages, setRemovedImages] = useState<ExistingImage[]>([]);
   const [customFields, setCustomFields] = useState<Record<string, unknown> | null>(null);
-  const [tagNames, setTagNames] = useState<string[] | null>(null);
 
   const initialValues = useMemo<FormValues>(() => {
     if (!isEdit) {
@@ -166,13 +168,15 @@ export function ItemFormPage() {
   const showMoney = categoryShowsMoney(selectedCategory?.slug);
   const showBrand = categoryShowsBrand(selectedCategory?.slug);
   const showSeries = categoryShowsSeries(selectedCategory?.slug);
+  const showName = categoryShowsName(selectedCategory?.slug);
+  const showStatus = categoryShowsStatus(selectedCategory?.slug);
   const brandLabel = categoryBrandLabel(selectedCategory?.slug);
 
   const effectiveCustomFields =
     customFields ?? (isEdit ? (existingItem?.custom_fields ?? {}) : {});
 
-  const effectiveTags =
-    tagNames ?? (isEdit ? (existingItem?.tags.map((t) => t.name) ?? []) : []);
+  // The tags editor was removed from the form; existing tags are preserved.
+  const effectiveTags = isEdit ? (existingItem?.tags.map((t) => t.name) ?? []) : [];
 
   const visibleExisting = (existingItem?.image_urls ?? []).filter(
     (entry) => !removedImages.some((r) => r.image.id === entry.image.id),
@@ -181,15 +185,24 @@ export function ItemFormPage() {
   const saving = createItem.isPending || updateItem.isPending;
 
   const onSubmit = async (values: FormValues) => {
+    if (showName && !values.name.trim()) {
+      form.setError("name", { message: "Give it a name" });
+      return;
+    }
+    const finalCustomFields = withBooleanDefaults(template, effectiveCustomFields);
     // Hidden fields are cleared so stale values don't survive a shelf change.
     const brand = showBrand
       ? values.brand.trim() || (selectedCategory?.slug === "lego" ? "LEGO" : "")
       : "";
     const series = showSeries ? values.series : "";
-    const input = toItemInput(
-      { ...values, brand, series },
-      withBooleanDefaults(template, effectiveCustomFields),
-    );
+    const name = showName
+      ? values.name
+      : deriveItemName(
+          selectedCategory?.slug,
+          finalCustomFields,
+          selectedCategory?.name ?? "Item",
+        );
+    const input = toItemInput({ ...values, name, brand, series }, finalCustomFields);
     try {
       if (isEdit && id) {
         await updateItem.mutateAsync({
@@ -248,6 +261,66 @@ export function ItemFormPage() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <Card>
             <CardHeader>
+              <CardTitle>Shelf</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {categories?.map((category) => {
+                  const active = category.id === selectedCategoryId;
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => {
+                        form.setValue("category_id", category.id, {
+                          shouldValidate: true,
+                        });
+                        setCustomFields({});
+                        if (
+                          category.slug === "lego" &&
+                          !form.getValues("brand").trim()
+                        ) {
+                          form.setValue("brand", "LEGO");
+                        }
+                      }}
+                      className={cn(
+                        "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                        !active &&
+                          "border-border text-muted-foreground hover:text-foreground",
+                      )}
+                      style={
+                        active
+                          ? {
+                              borderColor: category.color,
+                              color: category.color,
+                              backgroundColor: `color-mix(in oklab, ${category.color} 12%, transparent)`,
+                            }
+                          : undefined
+                      }
+                    >
+                      <CategoryIcon
+                        icon={category.icon}
+                        color={category.color}
+                        className="size-5 rounded-md"
+                        iconClassName="size-3"
+                      />
+                      {category.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {errors.category_id && (
+                <p className="mt-2 text-xs text-destructive">
+                  {errors.category_id.message}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {selectedCategory && (
+            <>
+          <Card>
+            <CardHeader>
               <CardTitle>Photos</CardTitle>
             </CardHeader>
             <CardContent>
@@ -262,98 +335,50 @@ export function ItemFormPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Details</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Category *</Label>
-                <Select
-                  value={selectedCategoryId}
-                  onValueChange={(value) => {
-                    form.setValue("category_id", value, { shouldValidate: true });
-                    setCustomFields({});
-                    const picked = categories?.find((c) => c.id === value);
-                    if (picked?.slug === "lego" && !form.getValues("brand").trim()) {
-                      form.setValue("brand", "LEGO");
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pick a shelf" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories?.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        <span className="flex items-center gap-2">
-                          <CategoryIcon
-                            icon={category.icon}
-                            color={category.color}
-                            className="size-5 rounded-md"
-                            iconClassName="size-3"
-                          />
-                          {category.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.category_id && (
-                  <p className="text-xs text-destructive">{errors.category_id.message}</p>
+          {(showName || showBrand || showSeries) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Details</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                {showName && (
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder="LEGO McLaren Formula 1"
+                      {...form.register("name")}
+                    />
+                    {errors.name && (
+                      <p className="text-xs text-destructive">{errors.name.message}</p>
+                    )}
+                  </div>
                 )}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="LEGO McLaren Formula 1"
-                  {...form.register("name")}
-                />
-                {errors.name && (
-                  <p className="text-xs text-destructive">{errors.name.message}</p>
+                {showBrand && (
+                  <div className="space-y-2">
+                    <Label htmlFor="brand">{brandLabel}</Label>
+                    <Input
+                      id="brand"
+                      placeholder={brandLabel === "Studio" ? "Rockstar Games" : "LEGO"}
+                      {...form.register("brand")}
+                    />
+                  </div>
                 )}
-              </div>
 
-              {showBrand && (
-                <div className="space-y-2">
-                  <Label htmlFor="brand">{brandLabel}</Label>
-                  <Input
-                    id="brand"
-                    placeholder={brandLabel === "Studio" ? "Rockstar Games" : "LEGO"}
-                    {...form.register("brand")}
-                  />
-                </div>
-              )}
-
-              {showSeries && (
-                <div className="space-y-2">
-                  <Label htmlFor="series">Series</Label>
-                  <Input
-                    id="series"
-                    placeholder="Speed Champions"
-                    {...form.register("series")}
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  rows={3}
-                  placeholder="What makes this piece special?"
-                  {...form.register("description")}
-                />
-              </div>
-
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Tags</Label>
-                <TagInput value={effectiveTags} onChange={setTagNames} />
-              </div>
-            </CardContent>
-          </Card>
+                {showSeries && (
+                  <div className="space-y-2">
+                    <Label htmlFor="series">Series</Label>
+                    <Input
+                      id="series"
+                      placeholder="Speed Champions"
+                      {...form.register("series")}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {template.length > 0 && (
             <Card>
@@ -370,31 +395,34 @@ export function ItemFormPage() {
             </Card>
           )}
 
+          {(showStatus || showMoney) && (
           <Card>
             <CardHeader>
               <CardTitle>Ownership</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={form.watch("status")}
-                  onValueChange={(value) =>
-                    form.setValue("status", value as FormValues["status"])
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {STATUS_LABELS[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {showStatus && (
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={form.watch("status")}
+                    onValueChange={(value) =>
+                      form.setValue("status", value as FormValues["status"])
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {STATUS_LABELS[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {showMoney && (
                 <>
@@ -444,6 +472,7 @@ export function ItemFormPage() {
               )}
             </CardContent>
           </Card>
+          )}
 
           <div className="flex justify-end gap-3">
             <Button
@@ -465,6 +494,8 @@ export function ItemFormPage() {
                   : "Add to vault"}
             </Button>
           </div>
+            </>
+          )}
         </form>
       </div>
     </PageTransition>
