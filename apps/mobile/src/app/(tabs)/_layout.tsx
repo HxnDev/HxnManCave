@@ -1,5 +1,5 @@
 import { Redirect, Tabs } from "expo-router";
-import { ChartPie, LayoutGrid, Library, Settings } from "lucide-react-native";
+import { LayoutGrid, Library, Settings } from "lucide-react-native";
 import { useAuth } from "@/lib/auth";
 import { colors, font } from "@/lib/theme";
 
@@ -41,13 +41,6 @@ export default function TabsLayout() {
         options={{
           title: "Categories",
           tabBarIcon: ({ color }) => <LayoutGrid size={22} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: "Dashboard",
-          tabBarIcon: ({ color }) => <ChartPie size={22} color={color} />,
         }}
       />
       <Tabs.Screen

@@ -2,7 +2,15 @@ import type { Category } from "@mancave/shared";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { ChevronRight, Library, Plus, Search } from "lucide-react-native";
+import {
+  Boxes,
+  ChevronRight,
+  Layers,
+  Library,
+  Plus,
+  Search,
+  Wallet,
+} from "lucide-react-native";
 import { useMemo, useState } from "react";
 import {
   FlatList,
@@ -27,6 +35,26 @@ import {
 import { colors, font, radius, STATUS_LABELS, tint, toRnColor } from "@/lib/theme";
 
 const STATUS_FILTERS = ["owned", "wishlist"];
+
+function StatPill({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  label: string;
+}) {
+  return (
+    <View style={styles.statPill}>
+      {icon}
+      <View>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+    </View>
+  );
+}
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -132,6 +160,23 @@ export default function ShelvesScreen() {
 
   const firstName = profile?.display_name?.split(" ")[0];
 
+  const stats = useMemo(() => {
+    const all = items ?? [];
+    const usedCategories = new Set(all.map((item) => item.category_id)).size;
+    const byCurrency = new Map<string, number>();
+    for (const item of all) {
+      if (item.status !== "owned") continue;
+      const value = item.current_value ?? item.purchase_price;
+      if (value === null) continue;
+      byCurrency.set(
+        item.currency,
+        (byCurrency.get(item.currency) ?? 0) + value * item.quantity,
+      );
+    }
+    const topCurrency = [...byCurrency.entries()].sort((a, b) => b[1] - a[1])[0];
+    return { total: all.length, usedCategories, topCurrency };
+  }, [items]);
+
   const shelves = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = (items ?? []).filter((item) => {
@@ -169,6 +214,28 @@ export default function ShelvesScreen() {
           <Text style={styles.heroTitle}>
             {firstName ? `${firstName}'s vault` : "Your vault"}
           </Text>
+        </View>
+
+        <View style={styles.statsRow}>
+          <StatPill
+            icon={<Boxes size={16} color={colors.primary} />}
+            value={String(stats.total)}
+            label="Items"
+          />
+          <StatPill
+            icon={<Layers size={16} color={colors.sky} />}
+            value={String(stats.usedCategories)}
+            label="Categories"
+          />
+          <StatPill
+            icon={<Wallet size={16} color={colors.primaryBright} />}
+            value={
+              stats.topCurrency
+                ? Math.round(stats.topCurrency[1]).toLocaleString()
+                : "—"
+            }
+            label={stats.topCurrency ? `Value (${stats.topCurrency[0]})` : "Value"}
+          />
         </View>
 
         <View style={styles.searchWrap}>
@@ -255,6 +322,35 @@ const styles = StyleSheet.create({
     fontFamily: font.extrabold,
     fontSize: 30,
     marginTop: 2,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginHorizontal: 20,
+    marginBottom: 14,
+  },
+  statPill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  statValue: {
+    color: colors.text,
+    fontFamily: font.extrabold,
+    fontSize: 15.5,
+  },
+  statLabel: {
+    color: colors.muted,
+    fontFamily: font.medium,
+    fontSize: 10.5,
+    marginTop: 1,
   },
   searchWrap: {
     flexDirection: "row",
