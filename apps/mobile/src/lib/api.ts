@@ -14,6 +14,8 @@ export interface MobileItem extends Item {
   category: CategorySummary;
   images: ItemImage[];
   cover_url: string | null;
+  /** Storage path behind cover_url — stable cache key for expo-image. */
+  cover_path: string | null;
 }
 
 const ITEM_SELECT =
@@ -209,7 +211,10 @@ export function useUploadAvatar() {
       const path = `${userData.user.id}/avatar/${Date.now()}.jpg`;
       const { error } = await supabase.storage
         .from(BUCKET)
-        .upload(path, formData, { contentType: "image/jpeg" });
+        .upload(path, formData, {
+          contentType: "image/jpeg",
+          cacheControl: IMMUTABLE_CACHE,
+        });
       if (error) throw error;
 
       const { error: profileError } = await supabase
@@ -263,14 +268,23 @@ export function useItems() {
         images: sortImages(row.images),
       }));
 
+      // Lists always use the small thumbnail; legacy rows without one fall
+      // back to the full image until the migration script backfills them.
+      const coverPathOf = (images: ItemImage[]): string | null =>
+        images[0] ? (images[0].thumb_path ?? images[0].storage_path) : null;
+
       const coverPaths = withSortedImages
-        .map((row) => row.images[0]?.storage_path)
+        .map((row) => coverPathOf(row.images))
         .filter((p): p is string => Boolean(p));
       const urlMap = await getSignedUrls(coverPaths);
 
       return withSortedImages.map((row) => {
-        const cover = row.images[0]?.storage_path;
-        return { ...row, cover_url: cover ? (urlMap.get(cover) ?? null) : null };
+        const cover = coverPathOf(row.images);
+        return {
+          ...row,
+          cover_url: cover ? (urlMap.get(cover) ?? null) : null,
+          cover_path: cover,
+        };
       });
     },
   });
@@ -280,22 +294,57 @@ export function useItemImages(item: MobileItem | undefined) {
   return useQuery({
     queryKey: ["item-images", item?.id, item?.images.length],
     enabled: Boolean(item && item.images.length > 0),
-    queryFn: async (): Promise<{ id: string; url: string; path: string }[]> => {
-      const urlMap = await getSignedUrls(
-        item!.images.map((img) => img.storage_path),
+    queryFn: async (): Promise<
+      { id: string; url: string; path: string; thumbUrl: string; thumbPath: string }[]
+    > => {
+      const paths = item!.images.flatMap((img) =>
+        img.thumb_path
+          ? [img.storage_path, img.thumb_path]
+          : [img.storage_path],
       );
+      const urlMap = await getSignedUrls(paths);
       return item!.images
-        .map((img) => ({
-          id: img.id,
-          url: urlMap.get(img.storage_path) ?? "",
-          path: img.storage_path,
-        }))
+        .map((img) => {
+          const thumbPath = img.thumb_path ?? img.storage_path;
+          return {
+            id: img.id,
+            url: urlMap.get(img.storage_path) ?? "",
+            path: img.storage_path,
+            thumbUrl: urlMap.get(thumbPath) ?? "",
+            thumbPath,
+          };
+        })
         .filter((entry) => entry.url !== "");
     },
   });
 }
 
-/** Resize + compress a picked photo, then upload it to storage. */
+/** One year — filenames are unique per upload, so they are immutable. */
+const IMMUTABLE_CACHE = "31536000";
+
+/**
+ * Multipart upload streams the file natively — no base64 round-trip on the
+ * JS thread (which used to freeze the UI while saving).
+ */
+async function uploadFile(path: string, uri: string): Promise<void> {
+  const formData = new FormData();
+  formData.append("file", {
+    uri,
+    name: path.split("/").pop() ?? "photo.webp",
+    type: "image/webp",
+  } as unknown as Blob);
+
+  const { error } = await supabase.storage.from(BUCKET).upload(path, formData, {
+    contentType: "image/webp",
+    cacheControl: IMMUTABLE_CACHE,
+  });
+  if (error) throw error;
+}
+
+/**
+ * Create + upload a display image (~1400px) and a thumbnail (~480px) for a
+ * picked photo. Lists load only the thumbnail, keeping egress tiny.
+ */
 async function uploadPhoto(
   userId: string,
   itemId: string,
@@ -303,31 +352,35 @@ async function uploadPhoto(
   sortOrder: number,
   isMain: boolean,
 ): Promise<void> {
-  const manipulated = await manipulateAsync(
-    uri,
-    [{ resize: { width: 1280 } }],
-    { compress: 0.7, format: SaveFormat.JPEG },
-  );
+  const [display, thumb] = await Promise.all([
+    manipulateAsync(uri, [{ resize: { width: 1400 } }], {
+      compress: 0.76,
+      format: SaveFormat.WEBP,
+    }),
+    manipulateAsync(uri, [{ resize: { width: 480 } }], {
+      compress: 0.7,
+      format: SaveFormat.WEBP,
+    }),
+  ]);
 
-  // Multipart upload streams the file natively — no base64 round-trip on the
-  // JS thread (which used to freeze the UI while saving).
-  const formData = new FormData();
-  formData.append("file", {
-    uri: manipulated.uri,
-    name: "photo.jpg",
-    type: "image/jpeg",
-  } as unknown as Blob);
+  const base = `${userId}/${itemId}/${Date.now()}-${sortOrder}`;
+  const displayPath = `${base}-display.webp`;
+  const thumbPath = `${base}-thumb.webp`;
 
-  const path = `${userId}/${itemId}/${Date.now()}-${sortOrder}.jpg`;
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, formData, { contentType: "image/jpeg" });
-  if (error) throw error;
+  await uploadFile(displayPath, display.uri);
+  try {
+    await uploadFile(thumbPath, thumb.uri);
+  } catch (error) {
+    // Don't leave a display image without its thumbnail row.
+    await supabase.storage.from(BUCKET).remove([displayPath]);
+    throw error;
+  }
 
   const { error: rowError } = await supabase.from("item_images").insert({
     item_id: itemId,
     user_id: userId,
-    storage_path: path,
+    storage_path: displayPath,
+    thumb_path: thumbPath,
     sort_order: sortOrder,
     is_main: isMain,
   });
@@ -414,7 +467,13 @@ export function useUpdateItem() {
         );
         await supabase.storage
           .from(BUCKET)
-          .remove(removed.map((img) => img.storage_path));
+          .remove(
+            removed.flatMap((img) =>
+              img.thumb_path
+                ? [img.storage_path, img.thumb_path]
+                : [img.storage_path],
+            ),
+          );
         const { error: imgError } = await supabase
           .from("item_images")
           .delete()
@@ -459,7 +518,13 @@ export function useDeleteItem() {
       if (item.images.length > 0) {
         await supabase.storage
           .from(BUCKET)
-          .remove(item.images.map((img) => img.storage_path));
+          .remove(
+            item.images.flatMap((img) =>
+              img.thumb_path
+                ? [img.storage_path, img.thumb_path]
+                : [img.storage_path],
+            ),
+          );
       }
       const { error } = await supabase.from("items").delete().eq("id", item.id);
       if (error) throw error;

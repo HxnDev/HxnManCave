@@ -60,7 +60,10 @@ export interface ItemImage {
   id: string;
   item_id: string;
   user_id: string;
+  /** Display-size image (~1400px WebP), shown on item detail screens. */
   storage_path: string;
+  /** Small thumbnail (~480px WebP) for lists/grids; null on legacy rows. */
+  thumb_path: string | null;
   sort_order: number;
   is_main: boolean;
   created_at: string;

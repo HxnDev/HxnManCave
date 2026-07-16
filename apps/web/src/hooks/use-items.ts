@@ -23,7 +23,7 @@ export interface ItemWithMeta extends Item {
 
 export interface ItemDetail extends ItemWithMeta {
   /** All images with signed URLs, cover first. */
-  image_urls: { image: ItemImage; url: string }[];
+  image_urls: { image: ItemImage; url: string; thumb_url: string }[];
 }
 
 const ITEM_SELECT =
@@ -99,13 +99,18 @@ export function useItems(filters: ItemFilters = {}) {
         rows = rows.filter((row) => row.tags.some((tag) => tag.id === filters.tagId));
       }
 
+      // Lists always use the small thumbnail; legacy rows without one fall
+      // back to the full image until the migration script backfills them.
+      const coverPathOf = (images: ItemImage[]): string | null =>
+        images[0] ? (images[0].thumb_path ?? images[0].storage_path) : null;
+
       const coverPaths = rows
-        .map((row) => row.images[0]?.storage_path)
+        .map((row) => coverPathOf(row.images))
         .filter((p): p is string => Boolean(p));
       const urlMap = await getSignedUrls(coverPaths);
 
       return rows.map((row) => {
-        const coverPath = row.images[0]?.storage_path;
+        const coverPath = coverPathOf(row.images);
         return {
           ...row,
           cover_url: coverPath ? (urlMap.get(coverPath) ?? null) : null,
@@ -128,12 +133,24 @@ export function useItem(id: string | undefined) {
       if (error) throw error;
 
       const row = normalizeRow(data as unknown as ItemRow);
-      const urlMap = await getSignedUrls(row.images.map((img) => img.storage_path));
+      const urlMap = await getSignedUrls(
+        row.images.flatMap((img) =>
+          img.thumb_path ? [img.storage_path, img.thumb_path] : [img.storage_path],
+        ),
+      );
 
       const image_urls = row.images
-        .map((image) => ({ image, url: urlMap.get(image.storage_path) }))
-        .filter((entry): entry is { image: ItemImage; url: string } =>
-          Boolean(entry.url),
+        .map((image) => {
+          const url = urlMap.get(image.storage_path);
+          return {
+            image,
+            url,
+            thumb_url: urlMap.get(image.thumb_path ?? image.storage_path) ?? url,
+          };
+        })
+        .filter(
+          (entry): entry is { image: ItemImage; url: string; thumb_url: string } =>
+            Boolean(entry.url),
         );
 
       return {
@@ -165,11 +182,12 @@ export interface ItemInput {
 
 async function uploadImages(userId: string, itemId: string, files: File[], startOrder: number) {
   for (let i = 0; i < files.length; i++) {
-    const path = await uploadItemImage(userId, itemId, files[i]);
+    const { displayPath, thumbPath } = await uploadItemImage(userId, itemId, files[i]);
     const { error } = await supabase.from("item_images").insert({
       item_id: itemId,
       user_id: userId,
-      storage_path: path,
+      storage_path: displayPath,
+      thumb_path: thumbPath,
       sort_order: startOrder + i,
       is_main: startOrder + i === 0,
     });
@@ -253,7 +271,11 @@ export function useUpdateItem() {
             removedImages.map((img) => img.id),
           );
         if (imgError) throw imgError;
-        await deleteStorageFiles(removedImages.map((img) => img.storage_path));
+        await deleteStorageFiles(
+          removedImages.flatMap((img) =>
+            img.thumb_path ? [img.storage_path, img.thumb_path] : [img.storage_path],
+          ),
+        );
       }
 
       await uploadImages(userData.user.id, id, newFiles, existingCount);
@@ -268,7 +290,11 @@ export function useDeleteItem() {
   return useMutation({
     mutationFn: async (item: ItemWithMeta | ItemDetail) => {
       // Remove storage files first; DB rows cascade with the item.
-      await deleteStorageFiles(item.images.map((img) => img.storage_path));
+      await deleteStorageFiles(
+        item.images.flatMap((img) =>
+          img.thumb_path ? [img.storage_path, img.thumb_path] : [img.storage_path],
+        ),
+      );
       const { error } = await supabase.from("items").delete().eq("id", item.id);
       if (error) throw error;
     },

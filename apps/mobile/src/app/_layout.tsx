@@ -17,7 +17,16 @@ import { colors, font } from "@/lib/theme";
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
+  defaultOptions: {
+    queries: {
+      // Data barely changes between sessions; long staleTime avoids constant
+      // refetches (each of which used to re-sign and re-fetch image URLs).
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
 });
 
 export default function RootLayout() {

@@ -34,7 +34,10 @@ export default function EditItemScreen() {
     <ItemForm
       categories={categories}
       item={item}
-      existingImages={images ?? []}
+      existingImages={(images ?? []).map((img) => ({
+        id: img.id,
+        url: img.thumbUrl || img.url,
+      }))}
       busy={updateItem.isPending}
       submitLabel="Save changes"
       onSubmit={(input, newPhotoUris, removedImageIds) => {

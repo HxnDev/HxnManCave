@@ -172,7 +172,7 @@ export function ItemDetailPage() {
                         : "border-border opacity-60 hover:opacity-100",
                     )}
                   >
-                    <img src={entry.url} alt="" className="size-full object-cover" />
+                    <img src={entry.thumb_url} alt="" className="size-full object-cover" />
                   </button>
                 ))}
               </div>

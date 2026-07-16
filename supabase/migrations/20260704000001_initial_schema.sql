@@ -119,6 +119,7 @@ create table public.item_images (
   item_id uuid not null references public.items (id) on delete cascade,
   user_id uuid not null references auth.users (id) on delete cascade,
   storage_path text not null,
+  thumb_path text,
   sort_order integer not null default 0,
   is_main boolean not null default false,
   created_at timestamptz not null default now()

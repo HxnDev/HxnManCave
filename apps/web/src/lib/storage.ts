@@ -3,12 +3,15 @@ import { supabase } from "./supabase";
 
 const BUCKET = "item-images";
 
-/** Compress to web-friendly size (~350KB, max 1600px) before upload. */
-async function compress(file: File): Promise<File> {
+/** One year — filenames are unique per upload, so they are immutable. */
+const IMMUTABLE_CACHE = "31536000";
+
+/** Compress to a display-friendly size (~350KB, max 1400px) before upload. */
+async function compressDisplay(file: File): Promise<File> {
   try {
     return await imageCompression(file, {
       maxSizeMB: 0.35,
-      maxWidthOrHeight: 1600,
+      maxWidthOrHeight: 1400,
       useWebWorker: true,
       fileType: "image/webp",
     });
@@ -18,22 +21,57 @@ async function compress(file: File): Promise<File> {
   }
 }
 
-/** Upload one image; returns its storage path ({userId}/{itemId}/{uuid}.webp). */
+/** Tiny thumbnail (~30-80KB, max 480px) for lists and grids. */
+async function compressThumb(file: File): Promise<File> {
+  return await imageCompression(file, {
+    maxSizeMB: 0.08,
+    maxWidthOrHeight: 480,
+    useWebWorker: true,
+    fileType: "image/webp",
+  });
+}
+
+/**
+ * Upload the display image + thumbnail for one photo.
+ * Returns both storage paths ({userId}/{itemId}/{uuid}-*.webp).
+ */
 export async function uploadItemImage(
   userId: string,
   itemId: string,
   file: File,
-): Promise<string> {
-  const compressed = await compress(file);
-  const extension = compressed.type === "image/webp" ? "webp" : (file.name.split(".").pop() ?? "jpg");
-  const path = `${userId}/${itemId}/${crypto.randomUUID()}.${extension}`;
+): Promise<{ displayPath: string; thumbPath: string }> {
+  const [display, thumb] = await Promise.all([
+    compressDisplay(file),
+    compressThumb(file),
+  ]);
+
+  const base = `${userId}/${itemId}/${crypto.randomUUID()}`;
+  const displayExt =
+    display.type === "image/webp" ? "webp" : (file.name.split(".").pop() ?? "jpg");
+  const displayPath = `${base}-display.${displayExt}`;
+  const thumbPath = `${base}-thumb.webp`;
 
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(path, compressed, { contentType: compressed.type });
+    .upload(displayPath, display, {
+      contentType: display.type,
+      cacheControl: IMMUTABLE_CACHE,
+    });
   if (error) throw error;
 
-  return path;
+  const { error: thumbError } = await supabase.storage
+    .from(BUCKET)
+    .upload(thumbPath, thumb, {
+      contentType: thumb.type,
+      cacheControl: IMMUTABLE_CACHE,
+    });
+  if (thumbError) {
+    // Don't leave a display image without its thumbnail row.
+    await supabase.storage.from(BUCKET).remove([displayPath]);
+    throw thumbError;
+  }
+
+  return { displayPath, thumbPath };
 }
 
 /** Sign for 7 days; refresh via the memo an hour before expiry. */

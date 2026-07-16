@@ -45,7 +45,7 @@ function RecentItem({ item }: { item: MobileItem }) {
     >
       {item.cover_url ? (
         <Image
-          source={{ uri: item.cover_url, cacheKey: item.images[0]?.storage_path }}
+          source={{ uri: item.cover_url, cacheKey: item.cover_path ?? undefined }}
           recyclingKey={item.id}
           style={styles.recentImage}
           contentFit="cover"

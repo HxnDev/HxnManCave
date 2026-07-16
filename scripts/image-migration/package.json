@@ -1,0 +1,17 @@
+{
+  "name": "mancave-image-migration",
+  "private": true,
+  "type": "module",
+  "description": "One-time migration: regenerate every item photo as display (1400px) + thumbnail (480px) WebP files.",
+  "scripts": {
+    "plan": "node --env-file=.env migrate.mjs plan",
+    "run-migration": "node --env-file=.env migrate.mjs run",
+    "verify": "node --env-file=.env migrate.mjs verify",
+    "cleanup": "node --env-file=.env migrate.mjs cleanup"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "p-limit": "^7.1.1",
+    "sharp": "^0.34.5"
+  }
+}
