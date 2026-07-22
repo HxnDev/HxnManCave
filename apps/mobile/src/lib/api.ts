@@ -1,5 +1,6 @@
 import type { Category, Item, ItemImage, Profile } from "@mancave/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { File } from "expo-file-system";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { supabase } from "./supabase";
 
@@ -201,17 +202,12 @@ export function useUploadAvatar() {
         { compress: 0.8, format: SaveFormat.JPEG },
       );
 
-      const formData = new FormData();
-      formData.append("file", {
-        uri: manipulated.uri,
-        name: "avatar.jpg",
-        type: "image/jpeg",
-      } as unknown as Blob);
+      const fileBody = await new File(manipulated.uri).arrayBuffer();
 
       const path = `${userData.user.id}/avatar/${Date.now()}.jpg`;
       const { error } = await supabase.storage
         .from(BUCKET)
-        .upload(path, formData, {
+        .upload(path, fileBody, {
           contentType: "image/jpeg",
           cacheControl: IMMUTABLE_CACHE,
         });
@@ -323,18 +319,13 @@ export function useItemImages(item: MobileItem | undefined) {
 const IMMUTABLE_CACHE = "31536000";
 
 /**
- * Multipart upload streams the file natively — no base64 round-trip on the
- * JS thread (which used to freeze the UI while saving).
+ * Supabase's React Native client requires an ArrayBuffer; Blob, File and
+ * FormData uploads do not work reliably in React Native.
  */
 async function uploadFile(path: string, uri: string): Promise<void> {
-  const formData = new FormData();
-  formData.append("file", {
-    uri,
-    name: path.split("/").pop() ?? "photo.webp",
-    type: "image/webp",
-  } as unknown as Blob);
+  const fileBody = await new File(uri).arrayBuffer();
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, formData, {
+  const { error } = await supabase.storage.from(BUCKET).upload(path, fileBody, {
     contentType: "image/webp",
     cacheControl: IMMUTABLE_CACHE,
   });
