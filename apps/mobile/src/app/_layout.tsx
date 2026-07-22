@@ -10,11 +10,29 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import * as Updates from "expo-updates";
 import { useEffect } from "react";
 import { AuthProvider } from "@/lib/auth";
 import { colors, font } from "@/lib/theme";
 
 SplashScreen.preventAutoHideAsync();
+
+/**
+ * Apply pending OTA updates on cold start instead of the default
+ * "download now, run on next launch" behavior. Failures are ignored —
+ * the app simply keeps running the bundle it already has.
+ */
+async function applyOtaUpdate() {
+  if (__DEV__ || !Updates.isEnabled) return;
+  try {
+    const update = await Updates.checkForUpdateAsync();
+    if (!update.isAvailable) return;
+    await Updates.fetchUpdateAsync();
+    await Updates.reloadAsync();
+  } catch {
+    // Offline or the update server is unreachable — not worth surfacing.
+  }
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +55,10 @@ export default function RootLayout() {
     Manrope_700Bold,
     Manrope_800ExtraBold,
   });
+
+  useEffect(() => {
+    void applyOtaUpdate();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync();
