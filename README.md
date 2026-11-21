@@ -1,7 +1,7 @@
-# HxnManCave
+# ManCave
 
-**ManCave** — everything you own, finally in one place. A personal collection
-vault for LEGO sets, Funko Pops, books, perfumes, games and more.
+Catalog collections such as LEGO sets, Funko Pops, books, fragrances and games.
+Organize items on shelves, add photos and track collection value on web and Android.
 
 Live at [vault.hxndev.com](https://vault.hxndev.com) · part of the
 [hxndev.com](https://hxndev.com) ecosystem.
